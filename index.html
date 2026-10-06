@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" href="data:,">
+  <title>Games</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #238636;
+      --blue: #58a6ff;
+      --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 420px at 10% -10%, rgba(35, 134, 54, 0.18), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(88, 166, 255, 0.12), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(760px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0 64px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: clamp(36px, 6vw, 52px);
+      font-weight: 650;
+      letter-spacing: -0.04em;
+    }
+
+    .lede {
+      max-width: 46ch;
+      margin: 12px 0 28px;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .games a {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 180px;
+      height: 100%;
+      padding: 18px;
+      text-decoration: none;
+      color: inherit;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .games a:hover {
+      border-color: var(--blue);
+    }
+
+    .games a:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 3px;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+    }
+
+    h2 {
+      margin: 4px 0 0;
+      font-family: var(--mono);
+      font-size: 22px;
+    }
+
+    .games p {
+      margin: 0;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .play {
+      align-self: flex-start;
+      margin-top: 8px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: var(--green);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="eyebrow">alexnaughtonjr</p>
+    <h1>Games</h1>
+    <p class="lede">Small, free browser games. Open one and play — nothing to install, and no account required.</p>
+    <ul class="games">
+      <li>
+        <a href="games/snake/index.html">
+          <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+            <rect x="4" y="14" width="8" height="8" rx="2" fill="#238636"/>
+            <rect x="14" y="14" width="8" height="8" rx="2" fill="#238636"/>
+            <rect x="24" y="14" width="8" height="8" rx="2" fill="#3fb950"/>
+            <circle cx="28" cy="10" r="3" fill="#58a6ff"/>
+          </svg>
+          <h2>Snake</h2>
+          <p>Steer a growing snake, eat the blue pellets, and beat the best score saved in this browser.</p>
+          <span class="play">Play</span>
+        </a>
+      </li>
+      <li>
+        <a href="games/memory/index.html">
+          <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+            <rect x="4" y="6" width="12" height="12" rx="2" fill="#161b22" stroke="#238636" stroke-width="2"/>
+            <rect x="20" y="6" width="12" height="12" rx="2" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+            <rect x="4" y="20" width="12" height="12" rx="2" fill="#58a6ff"/>
+            <circle cx="26" cy="26" r="6" fill="#3fb950"/>
+          </svg>
+          <h2>Memory Match</h2>
+          <p>Flip cards, remember eight pairs, and finish in as few moves as you can.</p>
+          <span class="play">Play</span>
+        </a>
+      </li>
+    </ul>
+    <footer>Primer dark · #0d1117 / #161b22 · #238636 · #58a6ff</footer>
+  </main>
+</body>
+</html>
