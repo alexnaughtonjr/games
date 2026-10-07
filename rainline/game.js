@@ -25,7 +25,7 @@
   ];
 
   const ENEMY_DEFS = [
-    { x: -9.4, z: 1.2, patrol: [[-9.6, 1.3], [-6.2, 2.1], [-8.2, -0.4]] },
+    { x: -10.2, z: 0.8, patrol: [[-10.2, 0.8], [-8.8, 1.5], [-9.6, 2.2]] },
     { x: 2.2, z: -2.4, patrol: [[2.2, -2.4], [6.4, 1.6], [-1.2, 3.4]] },
     { x: -1.5, z: 8.5, patrol: [[-1.5, 8.5], [5.5, 11], [-4.2, 6.4]] },
     { x: 9.5, z: -6.2, patrol: [[9.5, -6.2], [12.2, -1.2], [6.4, -7.4]] },
@@ -40,7 +40,7 @@
   const SMOKE_CD = 7;
 
   const keys = {};
-  const cam = { yaw: Math.PI / 2, pitch: 0.46, dist: 6.6 };
+  const cam = { yaw: Math.PI / 2, pitch: -0.16, dist: 6.4 };
   const player = {
     pos: new THREE.Vector3(-22, 12, 2),
     vy: 0,
@@ -147,7 +147,6 @@
     renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.physicallyCorrectLights = false;
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x070b12);
@@ -616,7 +615,7 @@
     mode = "play";
     ending = false;
     cam.yaw = Math.PI / 2;
-    cam.pitch = 0.42;
+    cam.pitch = -0.16;
     snapCam = true;
     titleEl.classList.add("hidden");
     pauseEl.classList.add("hidden");
@@ -719,8 +718,8 @@
 
   function applyLook(dx, dy) {
     cam.yaw -= dx * 0.0022;
-    cam.pitch -= dy * 0.0016;
-    cam.pitch = Math.max(0.12, Math.min(1.15, cam.pitch));
+    cam.pitch -= dy * 0.0018;
+    cam.pitch = Math.max(-0.65, Math.min(0.75, cam.pitch));
   }
 
   function onLockChange() {
@@ -742,6 +741,7 @@
     if (!paused) update(dt, now);
     else updateAmbience(real);
     updateCamera(real);
+    updateHud(now);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
@@ -774,7 +774,6 @@
     poseHero();
     poseEnemies();
     updateTrail();
-    updateHud(now);
     if (started && !ending && player.hp <= 0) finish(false);
     if (started && !ending && enemies.every((e) => e.dead)) finish(true);
   }
@@ -787,8 +786,9 @@
     if (keys.KeyS) wish.sub(forward);
     if (keys.KeyD) wish.add(right);
     if (keys.KeyA) wish.sub(right);
-    player.perched = player.pos.distanceTo(PERCH) < 1.55 && Math.abs(player.pos.y - PERCH.y) < 0.8;
-    const speed = player.perched ? 2.4 : 6.6;
+    const perchDist = flatDist(player.pos, PERCH);
+    player.perched = perchDist < 2.4 && Math.abs(player.pos.y - PERCH.y) < 0.9;
+    const speed = player.perched ? 2.2 : 6.6;
     player.moving = wish.lengthSq() > 0.001 && player.onGround;
     if (wish.lengthSq() > 0) {
       wish.normalize();
@@ -1130,20 +1130,25 @@
   }
 
   function updateCamera(real) {
-    camTarget.copy(player.pos);
-    camTarget.y += 1.45;
-    const cp = Math.cos(cam.pitch);
-    back.set(-Math.sin(cam.yaw) * cp, Math.sin(cam.pitch), -Math.cos(cam.yaw) * cp);
-    if (back.lengthSq() < 0.001) back.set(0, 0.2, 1);
-    back.normalize();
-    desiredCam.copy(camTarget).addScaledVector(back, cam.dist);
-    raycaster.set(camTarget, back);
-    raycaster.far = cam.dist;
+    const look = new THREE.Vector3(
+      Math.sin(cam.yaw) * Math.cos(cam.pitch),
+      Math.sin(cam.pitch),
+      Math.cos(cam.yaw) * Math.cos(cam.pitch)
+    );
+    const eye = player.pos.clone();
+    eye.y += 1.45;
+    desiredCam.copy(eye).addScaledVector(look, -cam.dist);
+    desiredCam.y += 0.9;
+    back.copy(desiredCam).sub(eye);
+    const dist = Math.max(0.001, back.length());
+    back.multiplyScalar(1 / dist);
+    raycaster.set(eye, back);
+    raycaster.far = dist;
     const hits = raycaster.intersectObjects(solids, false);
-    if (hits.length && hits[0].distance < cam.dist - 0.4) {
-      desiredCam.copy(camTarget).addScaledVector(back, Math.max(1.4, hits[0].distance - 0.35));
+    if (hits.length && hits[0].distance < dist - 0.35) {
+      desiredCam.copy(eye).addScaledVector(back, Math.max(1.35, hits[0].distance - 0.3));
     }
-    if (desiredCam.y < 0.45) desiredCam.y = 0.45;
+    if (desiredCam.y < 0.4) desiredCam.y = 0.4;
     const k = 1 - Math.exp(-8 * real);
     if (snapCam) {
       camera.position.copy(desiredCam);
@@ -1155,6 +1160,7 @@
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake;
     }
+    camTarget.copy(eye).addScaledVector(look, 9);
     camera.lookAt(camTarget);
     const fov = 58 + Math.min(6, shake * 10);
     if (Math.abs(camera.fov - fov) > 0.05) {
@@ -1192,6 +1198,8 @@
     if (threat && mode === "play") return "K  ·  Counter";
     if (mode === "play" && player.combo >= COMBO_NEED && nearestLiving(2.7)) return "F  ·  Finisher";
     if (mode === "play" && takedownTarget()) return "E  ·  Drop takedown";
+    if (mode === "grapple") return "Grappling";
+    if (mode === "leap") return "Takedown";
     if (mode === "play" && targetGrapple) return "Q  ·  Grapple";
     if (player.gliding) return "Gliding";
     if (!player.onGround) return "Hold Space  ·  Glide";
@@ -1201,8 +1209,11 @@
   function findGrapple() {
     camera.getWorldDirection(lookDir);
     let best = null;
-    let bestAng = 0.22;
+    let bestAng = 0.34;
     grapples.forEach((g) => {
+      const stand = Math.hypot(player.pos.x - g.position.x, player.pos.z - g.position.z);
+      const landY = groundHeight(g.position.x, g.position.z);
+      if (stand < 1.25 && Math.abs(player.pos.y - landY) < 1) return;
       const to = g.position.clone().sub(camera.position);
       const dist = to.length();
       if (dist > 30 || dist < 1.4) return;
@@ -1305,10 +1316,10 @@
   }
 
   function takedownTarget() {
-    if (player.pos.distanceTo(PERCH) > 1.55) return null;
-    if (Math.abs(player.pos.y - PERCH.y) > 0.8) return null;
+    if (flatDist(player.pos, PERCH) > 2.4) return null;
+    if (Math.abs(player.pos.y - PERCH.y) > 0.9) return null;
     let best = null;
-      let bestD = 7.6;
+    let bestD = 8.2;
     enemies.forEach((e) => {
       if (e.dead || e.pos.y > PERCH.y - 3) return;
       const d = Math.hypot(e.pos.x - PERCH.x, e.pos.z - PERCH.z);

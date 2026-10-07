@@ -54,7 +54,7 @@ body.hurt #flash { background: rgba(248, 81, 73, 0.28); opacity: 1; }
 #reticle {
   position: fixed;
   left: 50%;
-  top: 46%;
+  top: 50%;
   width: 10px;
   height: 10px;
   margin: -5px 0 0 -5px;
