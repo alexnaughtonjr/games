@@ -35,6 +35,20 @@ Sixteen cards, eight pairs. Flip two at a time and remember where each shape lan
 - New game deals a fresh board.
 - Fewest moves (`games.memory.bestMoves`) and best time (`games.memory.bestTimeMs`) stay in this browser.
 
+## Rainline
+
+`rainline/index.html`
+
+Free custom game for Alexander Haislip. A short 3D night block: freeflow stick combat, counters, a stone-perch takedown, grapple rings, glide, a stun disc, and a smoke pellet. Clear the alley crew for the win screen.
+
+WebGL is required. Three.js is vendored in the game folder, so play does not call a CDN. Keyboard and mouse. A local static server is the surest way to open it:
+
+```bash
+python3 -m http.server 8080
+```
+
+Then visit `http://localhost:8080/rainline/`. The on-screen card lists every control.
+
 ## Theme
 
 Pages use the GitHub Primer dark palette:
@@ -45,3 +59,7 @@ Pages use the GitHub Primer dark palette:
 - Blue accent `#58a6ff`
 
 Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Fonts are not downloaded; the browser uses whichever face in that stack is already installed.
+
+## GitHub Pages
+
+`.github/workflows/pages.yml` publishes the repository root on every push to `main`. When Pages is enabled with GitHub Actions as the source, the collection is at `https://alexnaughtonjr.github.io/games/` and Rainline is at `https://alexnaughtonjr.github.io/games/rainline/`.

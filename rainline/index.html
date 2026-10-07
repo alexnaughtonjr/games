@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <title>Rainline</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="vignette"></div>
+  <div id="flash"></div>
+  <div id="reticle" hidden></div>
+
+  <header id="hud" hidden>
+    <div class="brand">rainline <span>/ stick vigilante</span></div>
+    <div class="meters">
+      <label class="meter">health
+        <span class="track"><span id="hpBar"></span></span>
+      </label>
+      <label class="meter">combo
+        <span class="track"><span id="comboBar"></span></span>
+        <b id="comboN">x0</b>
+      </label>
+    </div>
+    <div class="status">
+      <span id="alert">hidden</span>
+      <span id="remain">6 left</span>
+    </div>
+  </header>
+
+  <aside id="controls">
+    <h2>controls</h2>
+    <ul>
+      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</li>
+      <li><kbd>Mouse</kbd> look</li>
+      <li><kbd>J</kbd> or click strike</li>
+      <li><kbd>K</kbd> or right-click counter</li>
+      <li><kbd>F</kbd> finisher at high combo</li>
+      <li><kbd>Q</kbd> grapple a glowing ring</li>
+      <li><kbd>E</kbd> perch takedown</li>
+      <li><kbd>Space</kbd> jump, hold to glide</li>
+      <li><kbd>1</kbd> disc · <kbd>2</kbd> smoke</li>
+      <li><kbd>Esc</kbd> pause</li>
+    </ul>
+  </aside>
+
+  <div id="gadgets" hidden>
+    <div class="chip"><kbd>1</kbd> disc <span class="cd"><i id="cdDisc"></i></span></div>
+    <div class="chip"><kbd>2</kbd> smoke <span class="cd"><i id="cdSmoke"></i></span></div>
+  </div>
+
+  <p id="prompt"></p>
+  <p id="tip" hidden>Stone perch on this roof: stand on the blue mark, then <kbd>E</kbd> to drop. Glowing rings are grapple points.</p>
+
+  <section id="title" class="overlay">
+    <div class="card">
+      <p class="eyebrow">free custom game</p>
+      <h1>Rainline</h1>
+      <p class="sub">Stick Vigilante</p>
+      <p class="lead">A rainy night on an original block. Chain strikes between the alley crew, counter the red warning over a thug’s head, drop from the stone perch, and grapple the neon rings.</p>
+      <button id="start" type="button">Start the vigil</button>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <section id="pause" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow">paused</p>
+      <h1>Rainline</h1>
+      <p class="lead">Click resume, then click the scene if the mouse is free.</p>
+      <button id="resume" type="button">Resume</button>
+    </div>
+  </section>
+
+  <section id="end" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow" id="endEyebrow">cleared</p>
+      <h1 id="endTitle">Block clear</h1>
+      <p class="lead" id="endText"></p>
+      <button id="retry" type="button">Run it back</button>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <p id="fail" class="fail hidden">This browser has no WebGL context, so Rainline cannot start.</p>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
