@@ -23,10 +23,29 @@
     { n: 2, coffee: 60 }, { n: 3, coffee: 55 }, { n: 4, coffee: 52 }, { n: 5, coffee: 50 }, { n: 6, coffee: 48 }
   ];
 
+  const HIGH_KEY = "games.vibeCoder.highScore";
   const $ = id => document.getElementById(id);
   let lvl = 0, score = 0, combo = 1, coffee = 0, maxCoffee = 60;
-  let active = [], sipped = false, timer = null, playing = false, deckCards = [];
-  let sceneApi = null;
+  let active = [], sipped = false, timer = null, playing = false, paused = false, deckCards = [];
+  let sceneApi = null, sprintTimer = null, endTimer = null, inRun = false;
+  let best = readHigh(), bestAtStart = best;
+
+  function readHigh() {
+    try {
+      const n = Number(localStorage.getItem(HIGH_KEY));
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function writeHigh(n) {
+    try {
+      localStorage.setItem(HIGH_KEY, String(n));
+    } catch {
+      /* private mode or blocked storage */
+    }
+  }
 
   const shuffle = a => {
     for (let i = a.length - 1; i > 0; i--) {
@@ -57,8 +76,46 @@
       ? active.length + " glitch" + (active.length > 1 ? "es" : "")
       : "0 glitches · ready to ship";
     $("glitchCount").className = "pill" + (active.length ? "" : " ok");
-    $("sip").disabled = sipped;
+    $("sip").disabled = sipped || paused;
+    $("deploy").disabled = paused;
+    if (score > best) {
+      best = score;
+      writeHigh(best);
+    }
+    $("best").textContent = String(best);
+    $("titleBest").textContent = best > 0
+      ? "Best score in this browser: " + best
+      : "Best score saves in this browser.";
+    const pauseBtn = $("pauseBtn");
+    pauseBtn.disabled = !playing;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+    pauseBtn.setAttribute("aria-pressed", paused ? "true" : "false");
     if (sceneApi) sceneApi.setCoffee(Math.max(0, coffee / maxCoffee), coffee / maxCoffee < 0.25);
+  }
+
+  function bestBlurb() {
+    if (score > bestAtStart) return "New best saved in this browser: " + score + ".";
+    if (best > 0) return "Best in this browser: " + best + ".";
+    return "Your best score will be saved in this browser.";
+  }
+
+  function hidePause() {
+    paused = false;
+    $("paused").classList.add("hidden");
+    $("paused").setAttribute("aria-hidden", "true");
+    if (sceneApi) sceneApi.setPaused(false);
+  }
+
+  function togglePause() {
+    if (!playing) return;
+    paused = !paused;
+    $("paused").classList.toggle("hidden", !paused);
+    $("paused").setAttribute("aria-hidden", paused ? "false" : "true");
+    if (sceneApi) sceneApi.setPaused(paused);
+    log(paused ? "paused — coffee timer and desk frozen" : "resumed", "info");
+    hud();
+    if (paused) $("resume").focus();
+    else $("pauseBtn").focus();
   }
 
   function startSprint() {
@@ -77,6 +134,7 @@
     deck.innerHTML = "";
     deckCards.forEach((c, i) => {
       const b = document.createElement("button");
+      b.type = "button";
       b.className = "card";
       b.innerHTML = '<span class="k">[' + (i + 1) + "]</span>";
       b.appendChild(document.createTextNode(c.t));
@@ -90,12 +148,12 @@
   }
 
   function play(i) {
-    if (!playing) return;
+    if (!playing || paused) return;
     const c = deckCards[i];
     if (!c || c.el.classList.contains("used")) return;
     c.el.classList.add("used");
     if (c.junk) {
-      coffee -= 8;
+      coffee = Math.max(0, coffee - 8);
       combo = 1;
       log(c.t + " → " + c.l + " (-8s coffee)", "bad");
       c.el.classList.add("shake");
@@ -113,9 +171,9 @@
   }
 
   function deploy() {
-    if (!playing) return;
+    if (!playing || paused) return;
     if (active.length) {
-      coffee -= 5;
+      coffee = Math.max(0, coffee - 5);
       combo = 1;
       log("deploy blocked: " + active.length + " glitch(es) still live (-5s)", "bad");
       if (sceneApi) sceneApi.pulseBad();
@@ -129,7 +187,8 @@
     if (sceneApi) sceneApi.celebrate();
     log("🚀 deployed! coffee bonus +" + bonus, "ok");
     hud();
-    setTimeout(() => {
+    clearTimeout(sprintTimer);
+    sprintTimer = setTimeout(() => {
       lvl++;
       if (lvl >= SPRINTS.length) win();
       else startSprint();
@@ -137,7 +196,7 @@
   }
 
   function sip() {
-    if (!playing || sipped) return;
+    if (!playing || paused || sipped) return;
     sipped = true;
     coffee = Math.min(maxCoffee, coffee + 10);
     log("☕ emergency sip +10s", "info");
@@ -146,7 +205,7 @@
   }
 
   function tick() {
-    if (!playing) return;
+    if (!playing || paused) return;
     coffee -= 0.1;
     if (coffee <= 0) {
       coffee = 0;
@@ -155,29 +214,48 @@
     } else hud();
   }
 
-  function lose() {
+  function endRun() {
     playing = false;
+    inRun = false;
+    hidePause();
     clearInterval(timer);
+    clearTimeout(sprintTimer);
+    hud();
+  }
+
+  function lose() {
+    if (!playing) return;
+    endRun();
     if (sceneApi) sceneApi.setMood("lose");
     $("endTitle").textContent = "Coffee died ☠️";
     $("endText").textContent =
       "You made it to sprint " + (lvl + 1) + " with " + score + " points. Brew another pot and try again.";
-    setTimeout(() => show("end"), 600);
+    $("endBest").textContent = bestBlurb();
+    clearTimeout(endTimer);
+    endTimer = setTimeout(() => {
+      if (!playing) show("end");
+    }, 600);
   }
 
   function win() {
-    clearInterval(timer);
+    endRun();
     if (sceneApi) sceneApi.setMood("win");
     $("endTitle").textContent = "Shipped all 5 sprints! 🚀";
     $("endText").textContent =
       "Final score: " + score + ". Clean prompts, hot coffee, real deploys in 3D. That's how Alexander Haislip ships.";
+    $("endBest").textContent = bestBlurb();
     show("end");
   }
 
   function begin() {
+    clearTimeout(sprintTimer);
+    clearTimeout(endTimer);
+    inRun = true;
     lvl = 0;
     score = 0;
     combo = 1;
+    bestAtStart = best;
+    hidePause();
     $("log").innerHTML = "";
     show("game");
     if (sceneApi) sceneApi.setMood("play");
@@ -446,6 +524,7 @@
     let camT = 0;
     let coffeeLevel = 1;
     let coffeeLow = false;
+    let scenePaused = false;
 
     function applyGlitches() {
       // reset
@@ -550,6 +629,7 @@
       setTimeout(() => accents.forEach(a => { a.material.emissiveIntensity = 0.7; }), 800);
     }
     function setMood(m) { mood = m; }
+    function setPaused(p) { scenePaused = !!p; }
 
     function onResize() {
       const w = window.innerWidth, h = window.innerHeight;
@@ -561,6 +641,10 @@
 
     function animate() {
       requestAnimationFrame(animate);
+      if (scenePaused) {
+        renderer.render(scene, camera);
+        return;
+      }
       camT += 0.008;
       const breathe = mood === "idle" ? 0.35 : 0.18;
       camera.position.x = 0.8 + Math.sin(camT * 0.7) * breathe;
@@ -630,24 +714,46 @@
     animate();
     setCoffee(1, false);
 
-    return { setGlitches, clearGlitch, setCoffee, pulseGood, pulseBad, sipFx, celebrate, setMood };
+    return { setGlitches, clearGlitch, setCoffee, pulseGood, pulseBad, sipFx, celebrate, setMood, setPaused };
   }
 
   sceneApi = initScene();
 
+  $("best").textContent = String(best);
+  $("titleBest").textContent = best > 0
+    ? "Best score in this browser: " + best
+    : "Best score saves in this browser.";
   $("start").onclick = begin;
   $("again").onclick = begin;
   $("deploy").onclick = deploy;
   $("sip").onclick = sip;
+  $("pauseBtn").onclick = togglePause;
+  $("resume").onclick = togglePause;
+  $("restart").onclick = begin;
   document.addEventListener("keydown", e => {
+    if (e.repeat) return;
+    const key = e.key.toLowerCase();
     if (e.key === "Enter") e.preventDefault();
+    if (playing && (key === "p" || e.key === " " || e.key === "Escape")) {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
+    if (key === "r" && (inRun || !$("end").classList.contains("hidden"))) {
+      begin();
+      return;
+    }
     if ($("game").classList.contains("hidden")) {
       if (e.key === "Enter" && !$("title").classList.contains("hidden")) begin();
       return;
     }
+    if (paused) {
+      if (e.key === "Enter") togglePause();
+      return;
+    }
     if (/^[1-8]$/.test(e.key)) play(+e.key - 1);
     else if (e.key === "Enter") deploy();
-    else if (e.key.toLowerCase() === "s") sip();
+    else if (key === "s") sip();
   });
 
   if (/[?&]autostart=1/.test(location.search)) {

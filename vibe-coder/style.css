@@ -20,6 +20,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:
 .brand{font-weight:700}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ok);margin-right:6px;box-shadow:0 0 10px var(--ok)}
 .stats span{margin-left:14px;color:var(--muted)}.stats b{color:var(--bright)}
 .coffee-stat b{color:var(--link)}
+.stats .btn.tiny{margin-left:14px;padding:4px 10px;font-size:12px;line-height:1.2}
+#paused.overlay{
+  z-index:7;pointer-events:auto;background:rgba(13,17,23,.35);
+  align-items:flex-end;padding-bottom:24px;
+}
+#paused .card-glass{width:min(480px,100%);padding:22px 20px}
+.pause-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .screen.overlay{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;padding:70px 16px 16px;pointer-events:none}
 .screen.overlay > *{pointer-events:auto}
 #game.hud{align-items:stretch;justify-content:stretch;padding:70px 14px 14px;pointer-events:none}
@@ -73,4 +80,5 @@ kbd{font-family:var(--mono);background:#21262d;border:1px solid var(--border);bo
   .log{height:90px}
   .topbar{font-size:12px}
   .stats span{margin-left:8px}
+  .stats .btn.tiny{margin-left:8px}
 }
