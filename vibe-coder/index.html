@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Vibe Coder: Ship Before Coffee Dies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="c3d"></canvas>
+
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span> vibe-coder <span class="muted">/ ship-before-coffee-dies · 3D</span></div>
+    <div class="stats">
+      <span>sprint <b id="lvl">1</b>/5</span>
+      <span>combo <b id="combo">x1</b></span>
+      <span>score <b id="score">0</b></span>
+      <span>best <b id="best">0</b></span>
+      <span class="coffee-stat">☕ <b id="secs">60s</b></span>
+      <button id="pauseBtn" type="button" class="btn tiny" disabled aria-pressed="false">Pause</button>
+    </div>
+  </header>
+
+  <section id="title" class="screen overlay">
+    <div class="card-glass">
+      <p class="eyebrow">week two · free custom drop · now in 3D</p>
+      <h1>Vibe Coder<br><span class="accent">Ship Before Coffee Dies</span></h1>
+      <p class="lead">You’re at a neon Primer desk with a glitchy landing page floating in 3D. Chain the right AI prompts, clear every glitch shard, and hit <b>Deploy</b> before the coffee in the mug runs dry.</p>
+      <ul class="howto">
+        <li>Five sprints. Each drops a broken page with more glitches and less coffee.</li>
+        <li>Pick a prompt (click / tap a card or press <kbd>1</kbd>–<kbd>8</kbd>). Real fixes clear shards and build combo.</li>
+        <li>Junk prompts burn coffee and reset combo. One <b>Sip</b> per sprint (<kbd>S</kbd>) adds 10s.</li>
+        <li>All clear? <b>Deploy</b> (<kbd>Enter</kbd>). Leftover coffee becomes bonus points.</li>
+        <li><kbd>Space</kbd> or <kbd>P</kbd> pauses the timer and freezes the desk. <kbd>R</kbd> restarts the run. Best score stays in this browser.</li>
+      </ul>
+      <button id="start" class="btn primary">Start sprint ▶</button>
+      <p id="titleBest" class="credit">Best score saves in this browser.</p>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <section id="game" class="screen overlay hud hidden">
+    <div class="hud-left">
+      <div class="panel glass">
+        <div class="panel-head"><span>preview · localhost:3000</span><span id="glitchCount" class="pill">0 glitches</span></div>
+        <div id="pageLabel" class="page-label">shipfast.dev</div>
+      </div>
+      <div class="panel glass log-panel">
+        <div class="panel-head"><span>terminal</span></div>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+    <div class="hud-right">
+      <div class="panel glass coffee-panel">
+        <div class="panel-head"><span>coffee</span><span class="pill blue">3D mug</span></div>
+        <p class="hint">Watch the liquid in the scene. Sip once per sprint. Space pauses.</p>
+        <button id="sip" class="btn">☕ Sip (+10s)</button>
+      </div>
+    </div>
+    <div class="hud-bottom">
+      <div class="panel glass deck-panel">
+        <div class="panel-head"><span>prompt deck</span><span class="muted">pick fixes · avoid junk</span></div>
+        <div id="deck" class="deck"></div>
+        <div class="deploy-row"><button id="deploy" class="btn primary">🚀 Deploy (Enter)</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="end" class="screen overlay hidden">
+    <div class="card-glass">
+      <h1 id="endTitle">Shipped!</h1>
+      <p id="endText" class="lead"></p>
+      <p id="endBest" class="credit"></p>
+      <button id="again" class="btn primary">Play again ↻</button>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <section id="paused" class="screen overlay hidden" aria-hidden="true">
+    <div class="card-glass">
+      <p class="eyebrow">paused</p>
+      <h1>Coffee on hold</h1>
+      <p class="lead">The sprint timer is stopped and the 3D desk is frozen. Resume when you are ready to ship.</p>
+      <div class="pause-actions">
+        <button id="resume" type="button" class="btn primary">Resume</button>
+        <button id="restart" type="button" class="btn">Restart run</button>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="vendor/three.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,8 +1,8 @@
 # Games
 
-A small collection of free, self-contained browser games. Each one is plain HTML, CSS, and JavaScript: no build step, no install, and no external services.
+A small collection of free, self-contained browser games. Each one is plain HTML, CSS, and JavaScript: no build step and no install.
 
-Open `index.html` for the list, or open a game file directly.
+Open `index.html` for the list, or open a game file directly. Snake and Memory Match stay fully offline. Vibe Coder vendors Three.js and also requests Inter and JetBrains Mono from Google Fonts, with system-font fallbacks if that request is blocked.
 
 ## Play locally
 
@@ -35,6 +35,21 @@ Sixteen cards, eight pairs. Flip two at a time and remember where each shape lan
 - New game deals a fresh board.
 - Fewest moves (`games.memory.bestMoves`) and best time (`games.memory.bestTimeMs`) stay in this browser.
 
+## Vibe Coder: Ship Before Coffee Dies
+
+`vibe-coder/index.html`
+
+Alexander Haislip’s weekly free custom game, rebuilt in 3D. Chain the right AI prompts, clear glitchy landing-page shards on a neon Primer desk, and deploy before the coffee in the mug runs dry.
+
+Open `vibe-coder/index.html` in a browser, or serve the `vibe-coder/` folder. WebGL is required. Three.js ships at `vibe-coder/vendor/three.min.js`.
+
+- Five sprints. Click or tap a prompt card, or press 1–8. Real fixes clear a glitch and build a combo.
+- Junk prompts cost coffee and reset the combo. One Sip per sprint (S) adds 10 seconds.
+- Deploy (Enter) once every glitch is fixed. Leftover coffee becomes bonus points.
+- Space or P pauses the timer and freezes the desk. R restarts the run. The best score is saved in this browser (`games.vibeCoder.highScore`).
+
+Free custom game for Alexander Haislip.
+
 ## Rainline
 
 `rainline/index.html`
@@ -58,7 +73,7 @@ Pages use the GitHub Primer dark palette:
 - Green accent `#238636`
 - Blue accent `#58a6ff`
 
-Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Fonts are not downloaded; the browser uses whichever face in that stack is already installed.
+Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Snake, Memory Match, and Rainline do not download fonts. Vibe Coder requests Inter and JetBrains Mono from Google Fonts and falls back to that same stack.
 
 ## GitHub Pages
 
