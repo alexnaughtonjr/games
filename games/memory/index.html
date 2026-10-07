@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" href="data:,">
+  <title>Memory Match</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <h1>Memory Match</h1>
+      <a class="back" href="../../index.html">All games</a>
+    </header>
+    <p class="lede">Flip two cards at a time and clear all eight pairs.</p>
+    <section class="panel" aria-label="Memory match game">
+      <div class="stats">
+        <div><span class="label">Moves</span><strong id="moves">0</strong></div>
+        <div><span class="label">Pairs</span><strong id="matches">0/8</strong></div>
+        <div><span class="label">Time</span><strong id="time">0:00</strong></div>
+        <div><span class="label">Best</span><strong id="best">—</strong></div>
+      </div>
+      <div class="board-wrap">
+        <div id="grid" class="grid"></div>
+        <div id="overlay" class="overlay" hidden>
+          <h2 id="overlay-title">Cleared</h2>
+          <p id="overlay-text"></p>
+          <button id="overlay-restart" class="primary" type="button">Play again</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="restart" type="button">New game</button>
+      </div>
+      <p class="help">Tap a card, or use the arrow keys and Enter. Fewest moves and best time stay in this browser.</p>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

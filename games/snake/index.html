@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" href="data:,">
+  <title>Snake</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <h1>Snake</h1>
+      <a class="back" href="../../index.html">All games</a>
+    </header>
+    <p class="lede">Eat the blue pellets. Avoid the walls and your own tail.</p>
+    <section class="panel" aria-label="Snake game">
+      <div class="stats">
+        <div><span class="label">Score</span><strong id="score">0</strong></div>
+        <div><span class="label">Best</span><strong id="best">0</strong></div>
+        <div><span class="label">Length</span><strong id="length">3</strong></div>
+      </div>
+      <div class="board-wrap">
+        <canvas id="board" width="480" height="480" tabindex="0" aria-label="Snake board"></canvas>
+        <div id="overlay" class="overlay" hidden>
+          <h2 id="overlay-title">Ready</h2>
+          <p id="overlay-text"></p>
+          <button id="overlay-restart" class="primary" type="button">Play again</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="pause" type="button">Pause</button>
+        <button id="restart" type="button">Restart</button>
+      </div>
+      <div class="pad" id="pad" aria-label="Direction pad">
+        <button type="button" data-dir="up" aria-label="Up">↑</button>
+        <button type="button" data-dir="left" aria-label="Left">←</button>
+        <button type="button" data-dir="down" aria-label="Down">↓</button>
+        <button type="button" data-dir="right" aria-label="Right">→</button>
+      </div>
+      <p class="help">Arrows or WASD choose a direction and start the run. Space pauses. R restarts. Swipe the board on a touch screen. Best score stays in this browser.</p>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
