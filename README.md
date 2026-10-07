@@ -46,6 +46,7 @@ Open `vibe-coder/index.html` in a browser, or serve the `vibe-coder/` folder. We
 - Five sprints. Click or tap a prompt card, or press 1–8. Real fixes clear a glitch and build a combo.
 - Junk prompts cost coffee and reset the combo. One Sip per sprint (S) adds 10 seconds.
 - Deploy (Enter) once every glitch is fixed. Leftover coffee becomes bonus points.
+- Space or P pauses the timer and freezes the desk. R restarts the run. The best score is saved in this browser (`games.vibeCoder.highScore`).
 
 Free custom game for Alexander Haislip.
 

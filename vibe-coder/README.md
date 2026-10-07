@@ -10,6 +10,8 @@ Chain the right AI prompts, clear glitchy landing-page shards on a neon Primer d
 - Junk prompts ("Rewrite the whole thing in Rust") cost 8 seconds of coffee and reset your combo.
 - One emergency **Sip** per sprint (**S**) adds 10 seconds — watch the liquid level in the 3D mug.
 - **Deploy** (**Enter**) once every glitch is fixed. Deploying early costs 5 seconds. Leftover coffee becomes bonus points.
+- **Space** or **P** pauses the coffee timer and freezes the 3D desk (steam, shards, and camera). **R** restarts the run. Resume with Space, P, Esc, or Enter.
+- The best score is saved in this browser under `localStorage` (`games.vibeCoder.highScore`).
 
 ## Tech
 - **Three.js** (vendored locally at `vendor/three.min.js`) — offline-safe, no CDN required at play time.
