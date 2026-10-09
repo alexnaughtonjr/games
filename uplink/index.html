@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0d1117">
+  <title>Uplink</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="vignette"></div>
+
+  <header id="hud" hidden>
+    <div class="brand">uplink <span>/ relay shaft</span></div>
+    <div class="meters">
+      <span>height <b id="height">0m</b></span>
+    </div>
+    <a class="back" href="../index.html">All games</a>
+  </header>
+
+  <p id="hint" hidden><kbd>A</kbd><kbd>D</kbd> move · <kbd>Space</kbd> jump · fall and you drop back to the floor</p>
+
+  <section id="title" class="overlay">
+    <div class="card">
+      <p class="eyebrow">free custom game</p>
+      <h1>Uplink</h1>
+      <p class="sub">Relay Shaft</p>
+      <p class="lead">A dark 3D service shaft under a dead relay. You are the courier lamp. Jump the ledges and climb the stair before the drop takes you back to the floor.</p>
+      <ul class="howto">
+        <li><kbd>A</kbd><kbd>D</kbd> or the arrow keys move along the shaft.</li>
+        <li><kbd>Space</kbd>, <kbd>W</kbd>, or <kbd>Up</kbd> jumps. Tap for a short hop, hold for the full arc.</li>
+        <li>Missing a ledge drops you back to the floor. The shaft above is still dark — this stair is the way in.</li>
+      </ul>
+      <button id="start" type="button">Start the climb</button>
+      <p class="credit"><a class="back" href="../index.html">All games</a></p>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <p id="fail" class="fail hidden">This browser has no WebGL context, so Uplink cannot start. <a class="back" href="../index.html">All games</a></p>
+
+  <script src="../shared/vendor/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
