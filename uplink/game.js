@@ -29,7 +29,9 @@
 
   const state = {
     mode: "title",
-    time: 0
+    time: 0,
+    maxY: PLAT_H,
+    cores: 0
   };
 
   const player = {
@@ -47,6 +49,8 @@
   };
 
   const platforms = [];
+  const cores = [];
+  let goalBulb = null;
 
   const canvas = $("view");
   let renderer;
@@ -90,14 +94,18 @@
   scene.add(greenWash);
 
   buildShaft();
-  buildStair();
   buildCourier();
-  placeCourier(STAIR[0]);
+  buildCourse((Math.random() * 0x7fffffff) >>> 0);
+  placeCourier(platforms[0]);
   snapCamera();
 
   $("start").addEventListener("click", () => {
     $("start").blur();
     startRun();
+  });
+  $("retry").addEventListener("click", () => {
+    $("retry").blur();
+    restart();
   });
 
   window.addEventListener("keydown", (e) => {
@@ -105,12 +113,20 @@
     const move = e.code === "Space" || e.code === "ArrowUp" || e.code === "ArrowDown" ||
       e.code === "ArrowLeft" || e.code === "ArrowRight";
     if (move) e.preventDefault();
-    if (state.mode === "title" && (e.code === "Enter" || e.code === "Space") && !e.repeat) {
+    if (e.repeat) return;
+    if (state.mode === "title" && (e.code === "Enter" || e.code === "Space")) {
       startRun();
       return;
     }
+    if ((state.mode === "over" || state.mode === "win") && (e.code === "Enter" || e.code === "Space" || e.code === "KeyR")) {
+      restart();
+      return;
+    }
+    if (state.mode === "run" && e.code === "KeyR") {
+      restart();
+      return;
+    }
     keys.add(e.code);
-    if (e.repeat) return;
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") jumpEdge = true;
   });
 
@@ -128,12 +144,40 @@
   function startRun() {
     if (state.mode === "run") return;
     state.mode = "run";
-    placeCourier(STAIR[0]);
-    player.vx = 0;
-    player.vy = 0;
+    state.maxY = platforms[0].y + platforms[0].h;
+    state.cores = 0;
+    placeCourier(platforms[0]);
     $("title").classList.add("hidden");
+    $("end").classList.add("hidden");
     $("hud").hidden = false;
     $("hint").hidden = false;
+    updateHud();
+  }
+
+  function restart() {
+    state.mode = "boot";
+    buildCourse((Math.random() * 0x7fffffff) >>> 0);
+    startRun();
+    snapCamera();
+  }
+
+  function finish(won) {
+    if (state.mode !== "run") return;
+    state.mode = won ? "win" : "over";
+    $("hint").hidden = true;
+    $("endEyebrow").textContent = won ? "relay lit" : "signal lost";
+    $("endTitle").textContent = won ? "Uplink" : "Dropped";
+    const meters = Math.max(0, state.maxY).toFixed(1);
+    const score = currentScore();
+    const coreWord = state.cores === 1 ? "core" : "cores";
+    $("endText").textContent = won
+      ? "The relay pad is lit. " + meters + "m up, " + state.cores + " " + coreWord + ", score " + score + "."
+      : "The shaft took the lamp at " + meters + "m. Score " + score + ". " + state.cores + " " + coreWord + " banked.";
+    $("end").classList.remove("hidden");
+  }
+
+  function currentScore() {
+    return Math.round(Math.max(0, state.maxY) * 10 + state.cores * 100);
   }
 
   function resize() {
@@ -147,15 +191,17 @@
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.033);
     state.time += dt;
+    spinCores(dt);
+    if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
     if (state.mode === "run") stepPlayer(dt);
-    else idleCourier();
+    else if (state.mode === "title") idleCourier();
     updateCamera(dt);
-    updateHeight();
+    updateHud();
     renderer.render(scene, camera);
   }
 
   function idleCourier() {
-    const base = STAIR[0].y + PLAT_H;
+    const base = platforms[0].y + platforms[0].h;
     player.y = base + Math.sin(state.time * 2.1) * 0.05;
     player.mesh.position.set(player.x, player.y, player.z);
     player.mesh.rotation.y = Math.sin(state.time * 0.7) * 0.18;
@@ -196,6 +242,7 @@
     }
 
     player.grounded = false;
+    let landed = null;
     if (player.vy <= 0.01) {
       for (let i = 0; i < platforms.length; i++) {
         const p = platforms[i];
@@ -206,17 +253,29 @@
           player.y = top;
           player.vy = 0;
           player.grounded = true;
+          landed = p;
           break;
         }
       }
     }
 
-    if (player.grounded) player.coyote = 0.12;
-    else player.coyote -= dt;
+    if (player.grounded) {
+      player.coyote = 0.12;
+      if (player.y > state.maxY) state.maxY = player.y;
+    } else player.coyote -= dt;
 
-    if (player.y < -2) placeCourier(STAIR[0]);
+    collectCores();
 
     player.mesh.position.set(player.x, player.y, player.z);
+
+    if (landed && landed.kind === "goal") {
+      finish(true);
+      return;
+    }
+    if (player.y < -1.4 || (state.maxY > 2 && player.y < state.maxY - 8)) {
+      finish(false);
+      return;
+    }
     player.mesh.rotation.z = THREE.MathUtils.damp(player.mesh.rotation.z, -player.vx * 0.045, 8, dt);
     player.mesh.rotation.y = THREE.MathUtils.damp(player.mesh.rotation.y, dir * -0.25, 6, dt);
     const stretch = player.grounded ? 1 : 1.08;
@@ -250,9 +309,36 @@
     camera.lookAt(player.x * 0.18, player.y + 1.05, -0.4);
   }
 
-  function updateHeight() {
-    const meters = Math.max(0, player.y);
-    $("height").textContent = meters.toFixed(1) + "m";
+  function updateHud() {
+    $("height").textContent = Math.max(0, player.y).toFixed(1) + "m";
+    $("cores").textContent = String(state.cores);
+    $("score").textContent = String(currentScore());
+  }
+
+  function collectCores() {
+    const py = player.y + 0.5;
+    for (let i = 0; i < cores.length; i++) {
+      const c = cores[i];
+      if (c.got) continue;
+      const dx = player.x - c.mesh.position.x;
+      const dy = py - c.mesh.position.y;
+      const dz = player.z - c.mesh.position.z;
+      if (dx * dx + dy * dy + dz * dz < 0.42) {
+        c.got = true;
+        c.mesh.visible = false;
+        state.cores += 1;
+      }
+    }
+  }
+
+  function spinCores(dt) {
+    for (let i = 0; i < cores.length; i++) {
+      const c = cores[i];
+      if (c.got) continue;
+      c.mesh.rotation.y += dt * 2.2;
+      c.mesh.rotation.x += dt * 0.7;
+      c.mesh.position.y = c.baseY + Math.sin(state.time * 3 + c.phase) * 0.08;
+    }
   }
 
   function placeCourier(plat) {
@@ -328,18 +414,125 @@
     player.shadow = shadow;
   }
 
-  function buildStair() {
-    for (let i = 0; i < STAIR.length; i++) {
+  function mulberry32(a) {
+    return function () {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function canReach(a, b) {
+    const dy = b.y - a.y;
+    if (dy < 0.9 || dy > 1.46) return false;
+    const aL = a.x - a.w / 2;
+    const aR = a.x + a.w / 2;
+    const bL = b.x - b.w / 2;
+    const bR = b.x + b.w / 2;
+    let gap = 0;
+    if (bL > aR) gap = bL - aR;
+    else if (aL > bR) gap = aL - bR;
+    return gap <= 1.2;
+  }
+
+  function placeNext(prev, rand) {
+    for (let attempt = 0; attempt < 16; attempt++) {
+      const step = 1.05 + rand() * 0.3;
+      const w = 1.8 + rand() * 0.85;
+      const dir = rand() < 0.5 ? -1 : 1;
+      const stacked = rand() < 0.2;
+      let dx;
+      if (stacked) dx = (rand() - 0.5) * Math.min(prev.w, w) * 0.45;
+      else {
+        const minDx = Math.max(0.2, (prev.w + w) / 2 - 0.55);
+        const maxDx = (prev.w + w) / 2 + 1.05;
+        dx = minDx + rand() * Math.max(0.05, maxDx - minDx);
+      }
+      let x = prev.x + dir * dx;
+      const limit = SHAFT_HALF - w / 2 - 0.08;
+      x = Math.max(-limit, Math.min(limit, x));
+      const next = { x, y: prev.y + step, w, kind: "solid" };
+      if (canReach(prev, next)) return next;
+    }
+    const w = 2.5;
+    const limit = SHAFT_HALF - w / 2 - 0.08;
+    return { x: Math.max(-limit, Math.min(limit, prev.x)), y: prev.y + 1.12, w, kind: "solid" };
+  }
+
+  function clearCourse() {
+    for (let i = 0; i < platforms.length; i++) disposeObject(platforms[i].mesh);
+    for (let i = 0; i < cores.length; i++) disposeObject(cores[i].mesh);
+    platforms.length = 0;
+    cores.length = 0;
+    goalBulb = null;
+  }
+
+  function disposeObject(mesh) {
+    scene.remove(mesh);
+    mesh.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+  }
+
+  function buildCourse(seed) {
+    clearCourse();
+    const rand = mulberry32(seed);
+    const layout = STAIR.map((s) => ({ x: s.x, y: s.y, w: s.w, kind: "solid" }));
+    let prev = layout[layout.length - 1];
+    while (prev.y < 62) {
+      prev = placeNext(prev, rand);
+      layout.push(prev);
+    }
+    const goalW = 3.6;
+    const goalLimit = SHAFT_HALF - goalW / 2 - 0.05;
+    const goal = {
+      x: Math.max(-goalLimit, Math.min(goalLimit, prev.x * 0.4)),
+      y: prev.y + 1.18,
+      w: goalW,
+      kind: "goal"
+    };
+    if (!canReach(prev, goal)) {
+      goal.x = prev.x;
+      goal.y = prev.y + 1.12;
+      goal.w = Math.max(2.8, Math.min(3.8, prev.w + 0.8));
+    }
+    layout.push(goal);
+    for (let i = 0; i < layout.length; i++) {
       addPlatform({
-        x: STAIR[i].x,
-        y: STAIR[i].y,
+        x: layout[i].x,
+        y: layout[i].y,
         z: PLAT_Z,
-        w: STAIR[i].w,
+        w: layout[i].w,
         h: PLAT_H,
         d: PLAT_D,
-        kind: "solid"
+        kind: layout[i].kind
       });
+      if (layout[i].kind === "solid" && i > 1 && i % 3 === 0) {
+        addCore(layout[i].x, layout[i].y + PLAT_H + 0.72, 0.05, i);
+      }
     }
+  }
+
+  function addCore(x, y, z, phase) {
+    const mesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.16, 0),
+      new THREE.MeshStandardMaterial({
+        color: 0x58a6ff,
+        emissive: 0x58a6ff,
+        emissiveIntensity: 2.1,
+        roughness: 0.2,
+        metalness: 0.15
+      })
+    );
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    cores.push({ mesh, baseY: y, phase, got: false });
   }
 
   function addPlatform(spec) {
@@ -357,18 +550,34 @@
     body.position.y = spec.h / 2;
     group.add(body);
 
+    const lipColor = spec.kind === "goal" ? 0x238636 : 0x58a6ff;
     const lip = new THREE.Mesh(
       new THREE.BoxGeometry(spec.w + 0.05, 0.045, 0.07),
       new THREE.MeshStandardMaterial({
-        color: 0x58a6ff,
-        emissive: 0x58a6ff,
-        emissiveIntensity: 1.55,
+        color: lipColor,
+        emissive: lipColor,
+        emissiveIntensity: spec.kind === "goal" ? 2 : 1.55,
         roughness: 0.28,
         metalness: 0.15
       })
     );
     lip.position.set(0, spec.h - 0.02, spec.d / 2 - 0.02);
     group.add(lip);
+
+    if (spec.kind === "goal") {
+      const mast = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.09, 1.35, 10),
+        new THREE.MeshStandardMaterial({ color: 0x161b22, metalness: 0.7, roughness: 0.32, emissive: 0x238636, emissiveIntensity: 0.35 })
+      );
+      mast.position.y = spec.h + 0.68;
+      group.add(mast);
+      goalBulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x3fb950, emissive: 0x238636, emissiveIntensity: 2.2, roughness: 0.2 })
+      );
+      goalBulb.position.y = spec.h + 1.46;
+      group.add(goalBulb);
+    }
 
     group.position.set(spec.x, spec.y, spec.z);
     scene.add(group);

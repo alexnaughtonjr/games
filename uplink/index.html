@@ -16,24 +16,37 @@
     <div class="brand">uplink <span>/ relay shaft</span></div>
     <div class="meters">
       <span>height <b id="height">0m</b></span>
+      <span>cores <b id="cores">0</b></span>
+      <span>score <b id="score">0</b></span>
     </div>
     <a class="back" href="../index.html">All games</a>
   </header>
 
-  <p id="hint" hidden><kbd>A</kbd><kbd>D</kbd> move · <kbd>Space</kbd> jump · fall and you drop back to the floor</p>
+  <p id="hint" hidden><kbd>A</kbd><kbd>D</kbd> move · <kbd>Space</kbd> jump · <kbd>R</kbd> new shaft · a missed ledge ends the run</p>
 
   <section id="title" class="overlay">
     <div class="card">
       <p class="eyebrow">free custom game</p>
       <h1>Uplink</h1>
       <p class="sub">Relay Shaft</p>
-      <p class="lead">A dark 3D service shaft under a dead relay. You are the courier lamp. Jump the ledges and climb the stair before the drop takes you back to the floor.</p>
+      <p class="lead">A dark 3D service shaft under a dead relay. Jump the ledges, pocket the blue cores, and land on the green pad at the top.</p>
       <ul class="howto">
-        <li><kbd>A</kbd><kbd>D</kbd> or the arrow keys move along the shaft.</li>
-        <li><kbd>Space</kbd>, <kbd>W</kbd>, or <kbd>Up</kbd> jumps. Tap for a short hop, hold for the full arc.</li>
-        <li>Missing a ledge drops you back to the floor. The shaft above is still dark — this stair is the way in.</li>
+        <li><kbd>A</kbd><kbd>D</kbd> or the arrow keys move. <kbd>Space</kbd>, <kbd>W</kbd>, or <kbd>Up</kbd> jumps. Hold for the full arc.</li>
+        <li>Each meter is 10 points. Each blue core is 100. The run is a new shaft every time.</li>
+        <li>Miss a ledge and the lamp drops. <kbd>R</kbd> starts another shaft. Stand on the green pad to light the relay.</li>
       </ul>
       <button id="start" type="button">Start the climb</button>
+      <p class="credit"><a class="back" href="../index.html">All games</a></p>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <section id="end" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow" id="endEyebrow">signal lost</p>
+      <h1 id="endTitle">Dropped</h1>
+      <p class="lead" id="endText"></p>
+      <button id="retry" type="button">Climb again</button>
       <p class="credit"><a class="back" href="../index.html">All games</a></p>
       <p class="credit">Free custom game for Alexander Haislip</p>
     </div>

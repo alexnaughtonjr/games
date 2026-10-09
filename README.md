@@ -70,7 +70,7 @@ Then visit `http://localhost:8080/rainline/`. The on-screen card lists every con
 
 `uplink/index.html`
 
-Free custom game for Alexander Haislip. Climb a dark 3D relay shaft as a courier lamp. The opening stair is a short jump line: miss a ledge and you drop back to the floor.
+Free custom game for Alexander Haislip. Climb a dark 3D relay shaft as a courier lamp. Each run builds a new stair up to a green relay pad. Blue cores add to the score. Miss a ledge and the run ends.
 
 WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.min.js`, so play does not call a CDN and there is no build step.
 
