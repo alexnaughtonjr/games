@@ -24,6 +24,7 @@ Then open `http://localhost:8080/rainline/`.
 - `E` silent drop from the marked stone perch
 - `Space` jump, hold in the air to glide
 - `1` stun disc, `2` smoke pellet
+- `H` switches High / Low quality (shadow detail, bloom, rain density)
 - `Esc` pause
 
-Three.js is vendored at `vendor/three.min.js` (MIT). Nothing is loaded from a CDN at play time.
+Three.js r159 is vendored at `vendor/three.min.js`, and the bloom composer (`EffectComposer`, `UnrealBloomPass`, `OutputPass`) is vendored at `vendor/postprocessing.js`. Both are MIT. Nothing is loaded from a CDN at play time. High quality uses a soft moon shadow, two street-lamp shadow spots, and bloom. Low quality keeps the same fight with a lighter render.
