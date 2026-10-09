@@ -13,7 +13,7 @@ git clone https://github.com/alexnaughtonjr/games.git
 cd games
 ```
 
-Then open `index.html`, or one of the game pages below. On the collection page, press 1–4 to open Snake, Memory Match, Vibe Coder, or Rainline. Vibe Coder and Rainline link back to that page.
+Then open `index.html`, or one of the game pages below. On the collection page, press 1–5 to open Snake, Memory Match, Vibe Coder, Rainline, or Uplink. Vibe Coder, Rainline, and Uplink link back to that page.
 
 ## Snake
 
@@ -66,6 +66,18 @@ python3 -m http.server 8080
 
 Then visit `http://localhost:8080/rainline/`. The on-screen card lists every control.
 
+## Uplink
+
+`uplink/index.html`
+
+Free custom game for Alexander Haislip. Climb a dark 3D relay shaft as a courier lamp. Each run builds a new stair up to a relay dish. Boost pads launch you, red lips crumble, slabs slide, and sweep beams guard the upper shaft. Blue beacons save a checkpoint. Miss a ledge before the first beacon and the run ends.
+
+WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.min.js`, so play does not call a CDN and there is no build step.
+
+- `A` `D` or the arrow keys move. `Space`, `W`, or `Up` jumps. Touch screens use the buttons along the bottom.
+- `P` or `Esc` pauses. Blue beacons save a checkpoint. The best score stays in this browser (`games.uplink.best`).
+- Open `uplink/index.html` directly, or visit it from the collection.
+
 ## Theme
 
 Pages use the GitHub Primer dark palette:
@@ -75,7 +87,7 @@ Pages use the GitHub Primer dark palette:
 - Green accent `#238636`
 - Blue accent `#58a6ff`
 
-Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Snake, Memory Match, and Rainline do not download fonts. Vibe Coder requests Inter and JetBrains Mono from Google Fonts and falls back to that same stack.
+Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Snake, Memory Match, Rainline, and Uplink do not download fonts. Vibe Coder requests Inter and JetBrains Mono from Google Fonts and falls back to that same stack.
 
 ## GitHub Pages
 

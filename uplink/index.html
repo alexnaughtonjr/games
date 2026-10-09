@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0d1117">
+  <title>Uplink</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="vignette"></div>
+
+  <header id="hud" hidden>
+    <div class="brand">uplink <span>/ relay shaft</span></div>
+    <div class="meters">
+      <span>height <b id="height">0m</b></span>
+      <span>cores <b id="cores">0</b></span>
+      <span>score <b id="score">0</b></span>
+      <span>best <b id="best">0</b></span>
+      <span>beacon <b id="beacon">no beacon</b></span>
+      <span>slips <b id="slips">0</b></span>
+    </div>
+    <button id="pauseBtn" class="ghost" type="button" aria-pressed="false">Pause</button>
+    <a class="back" href="../index.html">All games</a>
+  </header>
+
+  <p id="hint" hidden><kbd>A</kbd><kbd>D</kbd> move · <kbd>Space</kbd> jump · <kbd>R</kbd> new shaft · blue beacons save you · red beams knock you off</p>
+
+  <section id="title" class="overlay">
+    <div class="card">
+      <p class="eyebrow">free custom game</p>
+      <h1>Uplink</h1>
+      <p class="sub">Relay Shaft</p>
+      <p class="lead">A dark 3D service shaft under a dead relay. The courier lamp lights the ledges. Jump, pocket the blue cores, and land on the green pad at the top.</p>
+      <ul class="howto">
+        <li><kbd>A</kbd><kbd>D</kbd> or the arrow keys move. <kbd>Space</kbd>, <kbd>W</kbd>, or <kbd>Up</kbd> jumps. Hold for the full arc.</li>
+        <li>Each meter is 10 points. Each blue core is 100. Green chevrons launch you. Red lips crumble. Blue slabs slide.</li>
+        <li>Land on a blue beacon and a later fall puts you back there. Red sweep beams count as a fall too.</li>
+        <li>With no beacon yet, a miss ends the run. <kbd>R</kbd> starts another shaft. The dish at the top is the relay.</li>
+        <li><kbd>P</kbd> or <kbd>Esc</kbd> pauses. On a touch screen, use the buttons along the bottom.</li>
+      </ul>
+      <button id="start" type="button">Start the climb</button>
+      <p id="titleBest" class="credit">Best score saves in this browser.</p>
+      <p class="credit"><a class="back" href="../index.html">All games</a></p>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <section id="pause" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow">paused</p>
+      <h1>Lamp on hold</h1>
+      <p class="lead">The shaft is frozen. Resume the climb, or start a new one.</p>
+      <div class="pause-actions">
+        <button id="resume" type="button">Resume</button>
+        <button id="restart" class="ghost" type="button">Restart run</button>
+        <a class="back" href="../index.html">All games</a>
+      </div>
+    </div>
+  </section>
+
+  <div id="touch" aria-hidden="true">
+    <button id="btnLeft" type="button">Left</button>
+    <button id="btnJump" class="jump" type="button">Jump</button>
+    <button id="btnRight" type="button">Right</button>
+  </div>
+
+  <section id="end" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow" id="endEyebrow">signal lost</p>
+      <h1 id="endTitle">Dropped</h1>
+      <p class="lead" id="endText"></p>
+      <button id="retry" type="button">Climb again</button>
+      <p class="credit"><a class="back" href="../index.html">All games</a></p>
+      <p class="credit">Free custom game for Alexander Haislip</p>
+    </div>
+  </section>
+
+  <p id="fail" class="fail hidden">This browser has no WebGL context, so Uplink cannot start. <a class="back" href="../index.html">All games</a></p>
+
+  <script src="../shared/vendor/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
