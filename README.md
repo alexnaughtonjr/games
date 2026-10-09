@@ -13,7 +13,7 @@ git clone https://github.com/alexnaughtonjr/games.git
 cd games
 ```
 
-Then open `index.html`, or one of the game pages below.
+Then open `index.html`, or one of the game pages below. On the collection page, press 1–4 to open Snake, Memory Match, Vibe Coder, or Rainline. Vibe Coder and Rainline link back to that page.
 
 ## Snake
 
@@ -48,6 +48,7 @@ Open `vibe-coder/index.html` in a browser, or serve the `vibe-coder/` folder. We
 - Junk prompts cost coffee and reset the combo. One Sip per sprint (S) adds 10 seconds.
 - Deploy (Enter) once every glitch is fixed. Leftover coffee becomes bonus points.
 - Space or P pauses the timer and freezes the desk. R restarts the run. The best score is saved in this browser (`games.vibeCoder.highScore`).
+- All games, in the top bar and on the title, pause, and result cards, returns to the collection.
 
 Free custom game for Alexander Haislip.
 
@@ -57,7 +58,7 @@ Free custom game for Alexander Haislip.
 
 Free custom game for Alexander Haislip. A short 3D night block: freeflow stick combat, counters, a stone-perch takedown, grapple rings, glide, a stun disc, and a smoke pellet. Clear the alley crew for the win screen.
 
-WebGL is required. Three.js is vendored in the game folder, so play does not call a CDN. Keyboard and mouse. A local static server is the surest way to open it:
+WebGL is required. Three.js is vendored in the game folder, so play does not call a CDN. Keyboard and mouse. Esc pauses even when the pointer is not locked, and the Pause button in the corner does the same. Title, pause, and result cards link back to all games. A local static server is the surest way to open it:
 
 ```bash
 python3 -m http.server 8080

@@ -110,6 +110,9 @@
     pauseEl.classList.add("hidden");
     canvas.requestPointerLock();
   });
+  document.getElementById("hudPause").addEventListener("click", () => {
+    pauseGame();
+  });
   document.getElementById("retry").addEventListener("click", () => {
     ending = false;
     endEl.classList.add("hidden");
@@ -667,9 +670,28 @@
     });
   }
 
+  function focusResume() {
+    if (!paused || ending) return;
+    const resume = document.getElementById("resume");
+    if (resume) resume.focus({ preventScroll: true });
+  }
+
+  function pauseGame() {
+    if (!started || ending || paused) return;
+    paused = true;
+    for (const k in keys) keys[k] = false;
+    pauseEl.classList.remove("hidden");
+    if (document.pointerLockElement) document.exitPointerLock();
+    setTimeout(focusResume, 0);
+  }
+
   function onKeyDown(e) {
     keys[e.code] = true;
-    if (["Space", "KeyJ", "KeyK", "KeyF", "KeyE", "KeyQ"].includes(e.code)) e.preventDefault();
+    if (["Space", "KeyJ", "KeyK", "KeyF", "KeyE", "KeyQ", "Escape"].includes(e.code)) e.preventDefault();
+    if (e.code === "Escape") {
+      if (started && !ending && !paused) pauseGame();
+      return;
+    }
     if (e.repeat) return;
     if (e.code === "Enter" && !started && !ending) {
       begin();
@@ -725,8 +747,9 @@
   function onLockChange() {
     const locked = document.pointerLockElement === canvas;
     if (!locked && started && !ending && !paused && (mode === "play" || mode === "grapple" || mode === "leap")) {
-      paused = true;
-      pauseEl.classList.remove("hidden");
+      pauseGame();
+    } else if (!locked && paused) {
+      setTimeout(focusResume, 0);
     }
   }
 
