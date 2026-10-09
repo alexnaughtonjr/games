@@ -16,3 +16,4 @@ Open `index.html` in a browser. WebGL is required. Three.js is the copy vendored
 - Falling off a ledge ends the run. `R` or Climb again builds a new shaft
 - The green pad at the top lights the relay and wins the run
 - Green chevrons are boost pads. Red lips crumble after you land. Blue slabs slide under you
+- The courier carries a lamp. Dust drifts in the shaft, and jumps throw a ring of sparks

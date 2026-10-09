@@ -7,6 +7,9 @@
   const GRAVITY = -24;
   const MOVE_SPEED = 7.1;
   const JUMP_V = 8.7;
+  const DUST = 180;
+  const SPARKS = 56;
+  const TRAIL = 16;
   const PLAT_H = 0.28;
   const PLAT_D = 2.15;
   const PLAT_Z = -0.25;
@@ -31,7 +34,8 @@
     mode: "title",
     time: 0,
     maxY: PLAT_H,
-    cores: 0
+    cores: 0,
+    shake: 0
   };
 
   const player = {
@@ -53,6 +57,14 @@
   const cores = [];
   const coreWorld = new THREE.Vector3();
   let goalBulb = null;
+  let dustGeo = null;
+  let sparkGeo = null;
+  let trailGeo = null;
+  let jumpRing = null;
+  let ringLife = 0;
+  const pulseRings = [];
+  const sparkVel = new Float32Array(56 * 3);
+  const sparkLife = new Float32Array(56);
 
   const canvas = $("view");
   let renderer;
@@ -96,6 +108,7 @@
   scene.add(greenWash);
 
   buildShaft();
+  buildAtmosphere();
   buildCourier();
   buildCourse((Math.random() * 0x7fffffff) >>> 0);
   placeCourier(platforms[0]);
@@ -195,6 +208,7 @@
     state.time += dt;
     spinCores(dt);
     updatePlatforms(dt);
+    updateAtmosphere(dt);
     if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
     if (state.mode === "run") stepPlayer(dt);
     else if (state.mode === "title") idleCourier();
@@ -229,6 +243,8 @@
       player.grounded = false;
       player.coyote = 0;
       player.buffer = 0;
+      puff(player.x, player.y, player.z);
+      burst(player.x, player.y + 0.05, player.z, 10);
     }
 
     player.vy += GRAVITY * dt;
@@ -246,6 +262,7 @@
 
     player.grounded = false;
     let landed = null;
+    const fallSpeed = player.vy;
     if (player.vy <= 0.01) {
       for (let i = 0; i < platforms.length; i++) {
         const p = platforms[i];
@@ -272,11 +289,18 @@
 
     player.ride = null;
     if (landed && !landed.falling) {
+      if (fallSpeed < -7) {
+        burst(player.x, player.y + 0.08, player.z, 16);
+        state.shake = Math.min(0.22, state.shake + 0.1);
+      }
       if (landed.kind === "boost") {
         player.vy = 12.8;
         player.grounded = false;
         player.coyote = 0;
         player.buffer = 0;
+        burst(player.x, player.y + 0.2, player.z, 18);
+        puff(player.x, player.y, player.z);
+        state.shake = 0.2;
       } else {
         player.ride = landed;
         if (landed.kind === "crumble" && landed.crumbleT == null) landed.crumbleT = 0.52;
@@ -315,7 +339,9 @@
     const destY = player.y + 2.55;
     const destZ = 8.5;
     const k = 1 - Math.exp(-4.2 * dt);
-    camera.position.x += (destX - camera.position.x) * k;
+    const jolt = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
+    state.shake = Math.max(0, state.shake - dt * 0.7);
+    camera.position.x += (destX - camera.position.x) * k + jolt;
     camera.position.y += (destY - camera.position.y) * k;
     camera.position.z += (destZ - camera.position.z) * k;
     camera.lookAt(player.x * 0.18, player.y + 1.05, -0.4);
@@ -445,6 +471,14 @@
     );
     pack.position.set(0, 0.52, -0.22);
     g.add(pack);
+
+    const lamp = new THREE.PointLight(0x7ee787, 36, 7.5, 2);
+    lamp.position.set(0, 0.62, 0.2);
+    g.add(lamp);
+    const visorLamp = new THREE.PointLight(0x58a6ff, 10, 3.2, 2);
+    visorLamp.position.set(0, 0.74, 0.32);
+    g.add(visorLamp);
+    player.lamp = lamp;
 
     scene.add(g);
     player.mesh = g;
@@ -698,6 +732,143 @@
     };
     platforms.push(record);
     return record;
+  }
+
+  function buildAtmosphere() {
+    dustGeo = new THREE.BufferGeometry();
+    const dustPos = new Float32Array(DUST * 3);
+    for (let i = 0; i < DUST; i++) {
+      dustPos[i * 3] = (Math.random() - 0.5) * 7.2;
+      dustPos[i * 3 + 1] = Math.random() * 18;
+      dustPos[i * 3 + 2] = -1 + Math.random() * 2.2;
+    }
+    dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+    scene.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({
+      color: 0x8b949e,
+      size: 3.2,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      sizeAttenuation: true
+    })));
+
+    sparkGeo = new THREE.BufferGeometry();
+    const sparkPos = new Float32Array(SPARKS * 3);
+    for (let i = 0; i < SPARKS; i++) sparkPos[i * 3 + 1] = -40;
+    sparkGeo.setAttribute("position", new THREE.BufferAttribute(sparkPos, 3));
+    scene.add(new THREE.Points(sparkGeo, new THREE.PointsMaterial({
+      color: 0x58a6ff,
+      size: 7,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      sizeAttenuation: true
+    })));
+
+    trailGeo = new THREE.BufferGeometry();
+    const trailPos = new Float32Array(TRAIL * 3);
+    trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPos, 3));
+    scene.add(new THREE.Points(trailGeo, new THREE.PointsMaterial({
+      color: 0x3fb950,
+      size: 5,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false,
+      sizeAttenuation: true
+    })));
+
+    jumpRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.32, 0.02, 8, 20),
+      new THREE.MeshBasicMaterial({ color: 0x58a6ff, transparent: true, opacity: 0, depthWrite: false })
+    );
+    jumpRing.rotation.x = Math.PI / 2;
+    scene.add(jumpRing);
+
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: 0x58a6ff,
+      emissive: 0x58a6ff,
+      emissiveIntensity: 0.85,
+      roughness: 0.35
+    });
+    for (let y = 10; y <= 104; y += 12) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(3.65, 0.03, 8, 48), ringMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0, y, -0.35);
+      scene.add(ring);
+      pulseRings.push(ring);
+    }
+  }
+
+  function updateAtmosphere(dt) {
+    const dustPos = dustGeo.attributes.position.array;
+    for (let i = 0; i < DUST; i++) {
+      const y = dustPos[i * 3 + 1] + dt * 0.45;
+      if (y > player.y + 12) {
+        dustPos[i * 3] = player.x + (Math.random() - 0.5) * 7;
+        dustPos[i * 3 + 1] = player.y - 5;
+        dustPos[i * 3 + 2] = -1 + Math.random() * 2;
+      } else dustPos[i * 3 + 1] = y;
+    }
+    dustGeo.attributes.position.needsUpdate = true;
+
+    const sparkPos = sparkGeo.attributes.position.array;
+    for (let i = 0; i < SPARKS; i++) {
+      if (sparkLife[i] <= 0) continue;
+      sparkLife[i] -= dt;
+      sparkVel[i * 3 + 1] -= 9 * dt;
+      sparkPos[i * 3] += sparkVel[i * 3] * dt;
+      sparkPos[i * 3 + 1] += sparkVel[i * 3 + 1] * dt;
+      sparkPos[i * 3 + 2] += sparkVel[i * 3 + 2] * dt;
+      if (sparkLife[i] <= 0) sparkPos[i * 3 + 1] = -40;
+    }
+    sparkGeo.attributes.position.needsUpdate = true;
+
+    const trailPos = trailGeo.attributes.position.array;
+    for (let i = TRAIL - 1; i > 0; i--) {
+      trailPos[i * 3] = trailPos[(i - 1) * 3];
+      trailPos[i * 3 + 1] = trailPos[(i - 1) * 3 + 1];
+      trailPos[i * 3 + 2] = trailPos[(i - 1) * 3 + 2];
+    }
+    trailPos[0] = player.x;
+    trailPos[1] = player.y + 0.55;
+    trailPos[2] = player.z - 0.05;
+    trailGeo.attributes.position.needsUpdate = true;
+
+    if (ringLife > 0) {
+      ringLife -= dt;
+      const u = 1 - Math.max(0, ringLife / 0.32);
+      jumpRing.scale.setScalar(0.45 + u * 2.4);
+      jumpRing.material.opacity = Math.max(0, ringLife / 0.32);
+    }
+    for (let i = 0; i < pulseRings.length; i++) {
+      pulseRings[i].rotation.z += dt * (0.15 + i * 0.02);
+    }
+    if (player.lamp) player.lamp.intensity = 30 + Math.sin(state.time * 5.5) * 6;
+  }
+
+  function puff(x, y, z) {
+    jumpRing.position.set(x, y + 0.05, z);
+    jumpRing.scale.setScalar(0.4);
+    jumpRing.material.opacity = 0.9;
+    ringLife = 0.32;
+  }
+
+  function burst(x, y, z, count) {
+    const pos = sparkGeo.attributes.position.array;
+    let n = 0;
+    for (let i = 0; i < SPARKS && n < count; i++) {
+      if (sparkLife[i] > 0) continue;
+      sparkLife[i] = 0.28 + Math.random() * 0.28;
+      pos[i * 3] = x;
+      pos[i * 3 + 1] = y;
+      pos[i * 3 + 2] = z;
+      const a = Math.random() * Math.PI * 2;
+      const s = 1.4 + Math.random() * 2.6;
+      sparkVel[i * 3] = Math.cos(a) * s;
+      sparkVel[i * 3 + 1] = 1 + Math.random() * 2.4;
+      sparkVel[i * 3 + 2] = Math.sin(a) * s * 0.45;
+      n++;
+    }
   }
 
   function buildShaft() {
