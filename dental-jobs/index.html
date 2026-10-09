@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenChair Jobs - private prototype</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.filters input,.filters select{min-width:140px}
+.job{display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--panel);cursor:pointer;transition:.15s}
+.job:hover{border-color:var(--blue);transform:translateY(-1px)}
+.job.feat{border-color:#d29922;box-shadow:0 0 0 1px #d2992255 inset}
+.logo{width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;font:700 18px var(--mono);color:#fff}
+.pay{font:700 15px var(--mono);color:#7ee787;text-align:right}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.detail{display:none;grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;color:var(--muted);font-size:14px}
+.job.open .detail{display:block}
+.sample{font:11px var(--mono);color:#f0883e;border:1px dashed #f0883e;border-radius:6px;padding:1px 6px}
+.price{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media(max-width:700px){.price{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<section class="hero" style="padding-bottom:10px">
+  <h1 style="font-size:34px">A dental job board where every listing shows the pay.</h1>
+  <p class="lead">Hygienists, assistants, front desk, and associates. Each listing needs a real pay range, and the board charts market rates as listings come in. <b>Every listing below is made-up sample data.</b></p>
+  <div class="cta-row"><a class="btn primary" href="#post">+ Post a job (demo)</a><a class="btn" href="#pay">📊 Pay data</a></div>
+</section>
+<div class="grid g4" id="kpi"></div>
+<div class="filters">
+  <input id="q" placeholder="search role, city…">
+  <select id="role"><option value="">all roles</option></select>
+  <select id="type"><option value="">any type</option><option>Full-time</option><option>Part-time</option><option>Temp / fill-in</option></select>
+  <select id="state"><option value="">any state</option></select>
+  <label class="small muted">min $/hr <input id="min" type="number" value="0" style="width:80px;min-width:0"></label>
+  <button class="btn" id="saveSearch">🔔 save search (local)</button>
+</div>
+<div id="list"></div>
+<h2 id="pay">📊 Pay ranges by role <span class="sample">sample data</span></h2>
+<div class="card"><canvas class="chart" id="payc" style="height:220px"></canvas><p class="small muted">Midpoint hourly pay from the listings on this page. Once real listings come in, this chart would turn into public market data, which is the free, linkable part of the board.</p></div>
+<h2 id="post">Post a job (demo)</h2>
+<div class="card">
+  <p class="small muted">This is a prototype, so it doesn't charge anything or publish anything. Fill it in to see a preview. "Request a listing" opens a DM with the text ready to paste.</p>
+  <div class="grid g3"><input id="pTitle" placeholder="Role (e.g. Dental Hygienist)"><input id="pOffice" placeholder="Office name"><input id="pCity" placeholder="City, ST"></div>
+  <div class="grid g3" style="margin-top:8px"><input id="pLo" type="number" placeholder="pay from $/hr"><input id="pHi" type="number" placeholder="pay to $/hr"><select id="pType"><option>Full-time</option><option>Part-time</option><option>Temp / fill-in</option></select></div>
+  <textarea id="pDesc" rows="3" placeholder="Schedule, perks, software…" style="width:100%;margin-top:8px"></textarea>
+  <div class="cta-row"><button class="btn" id="preview">👀 Preview</button><button class="btn primary" id="request">💬 Request a listing (DM)</button></div>
+  <div id="pv" style="margin-top:10px"></div>
+</div>
+<h2>Listing ideas (hypothesis, not for sale)</h2>
+<div class="price">
+  <div class="card"><h3>Basic</h3><b class="mono" style="font-size:22px">$—</b><p class="small muted">30 days, pay range required.</p></div>
+  <div class="card" style="border-color:#d29922"><h3>⭐ Featured</h3><b class="mono" style="font-size:22px">$—</b><p class="small muted">Pinned and highlighted, and included in the weekly alert.</p></div>
+  <div class="card"><h3>Temp fill-in</h3><b class="mono" style="font-size:22px">$—</b><p class="small muted">Same-week shifts with a 72-hour badge.</p></div>
+</div>
+<h2>Idea board</h2><div class="card" id="board"></div>
+<h2>Prototype dashboard</h2><div id="stats"></div>
+</div>
+<script src="../shared/lab.js"></script>
+<script>
+Lab.chrome({id:'dental-jobs', name:'OpenChair Jobs', icon:'🪥', proto:true});
+Lab.board(document.getElementById('board'), {product:'OpenChair Jobs (prototype)', seed:['Email alerts for saved searches','Map view','Salary report PDF','Temp shift calendar']});
+Lab.stats(document.getElementById('stats'), {product:'dental-jobs', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Listings opened','opens'],['Previews','previews']], log:[['Oct 9','Prototype: sample listings, filters, pay chart, post-a-job preview.']]});
+const $=id=>document.getElementById(id);
+// deterministic fake data - clearly labeled sample
+let s=7; const rnd=()=>{s=(s*16807)%2147483647; return (s-1)/2147483646;}; const pick=a=>a[Math.floor(rnd()*a.length)];
+const ROLES={'Dental Hygienist':[38,58],'Dental Assistant':[20,30],'Expanded Function DA':[25,36],'Front Desk / Scheduler':[18,26],'Office Manager':[26,40],'Associate Dentist':[70,120],'Treatment Coordinator':[22,32]};
+const CITIES=[['Austin','TX'],['Chicago','IL'],['Denver','CO'],['Phoenix','AZ'],['Nashville','TN'],['Portland','OR'],['Columbus','OH'],['Tampa','FL'],['Raleigh','NC'],['Minneapolis','MN'],['Boise','ID'],['Madison','WI']];
+const NAMES=['Maple','Bright','Riverbend','Summit','Juniper','Harbor','Northside','Cedar','Lakeview','Pinecrest','Sunrise','Oak Hollow'];
+const PERKS=['4-day week','no Saturdays','CE allowance','401k match','new scanner','paid lunch','sign-on bonus','flexible start','uniform stipend','mentorship'];
+const COLS=['#1f6feb','#238636','#8957e5','#d29922','#da3633','#0e8a16','#bf4b8a'];
+const jobs=[]; for(let i=0;i<26;i++){ const role=pick(Object.keys(ROLES)), [a,b]=ROLES[role], lo=Math.round(a+rnd()*(b-a)*.5), hi=Math.round(lo+(b-a)*(.2+rnd()*.4)); const [city,st]=pick(CITIES), name=pick(NAMES)+' '+pick(['Family Dental','Smiles','Dental Studio','Dentistry','Kids Dental']);
+  jobs.push({id:i,role,lo,hi,city,st,office:name,type:pick(['Full-time','Full-time','Part-time','Temp / fill-in']),days:Math.floor(rnd()*20),feat:i<3,perks:[pick(PERKS),pick(PERKS)].filter((v,i,a)=>a.indexOf(v)===i),col:pick(COLS)}); }
+jobs.sort((a,b)=>(b.feat-a.feat)||a.days-b.days);
+Object.keys(ROLES).forEach(r=>$('role').append(new Option(r,r))); [...new Set(CITIES.map(c=>c[1]))].sort().forEach(x=>$('state').append(new Option(x,x)));
+const per=j=>j.role==='Associate Dentist'?'/hr':'/hr';
+function card(j,preview){ const ini=j.office.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const el=Lab.h('div',{class:'job'+(j.feat?' feat':'')});
+  el.innerHTML=`<div class="logo" style="background:${j.col}">${ini}</div><div><b>${j.role}</b> <span class="sample">${preview?'preview':'sample'}</span>${j.feat?' <span class="pill orange">⭐ featured</span>':''}<div class="small muted">${j.office} · ${j.city}, ${j.st}</div><div class="tags"><span class="pill blue">${j.type}</span>${j.perks.map(p=>`<span class="pill">${p}</span>`).join('')}</div></div><div class="pay">$${j.lo}–${j.hi}${per(j)}<div class="small muted" style="font-weight:400">${j.days?j.days+'d ago':'today'}</div></div>
+  <div class="detail">${j.desc||`${j.office} is a made-up sample office used to show the layout. A real listing would include the schedule, software, team size, and how to apply. This sample has no real employer behind it.`}<div class="cta-row"><button class="btn" disabled>Apply (disabled in prototype)</button></div></div>`;
+  el.onclick=e=>{ if(e.target.tagName==='BUTTON') return; el.classList.toggle('open'); if(el.classList.contains('open')) Lab.track('dental-jobs','opens'); };
+  return el; }
+function render(){ const q=$('q').value.toLowerCase(), r=$('role').value, t=$('type').value, st=$('state').value, mn=+$('min').value||0;
+  const f=jobs.filter(j=>(!q||(j.role+j.city+j.office).toLowerCase().includes(q))&&(!r||j.role===r)&&(!t||j.type===t)&&(!st||j.st===st)&&j.hi>=mn);
+  $('list').innerHTML=''; f.forEach(j=>$('list').append(card(j))); if(!f.length) $('list').innerHTML='<div class="card muted">No sample listings match. Try a wider filter.</div>';
+  const avg=f.length?Math.round(f.reduce((a,j)=>a+(j.lo+j.hi)/2,0)/f.length):0;
+  $('kpi').innerHTML=''; [['Listings shown',f.length],['Avg midpoint',avg?'$'+avg+'/hr':'-'],['With pay range','100%'],['Temp shifts',f.filter(j=>j.type.startsWith('Temp')).length]].forEach(([l,v])=>$('kpi').append(Lab.h('div',{class:'card stat'},Lab.h('span',{},l),Lab.h('b',{},String(v)),Lab.h('div',{class:'small muted'},'sample data')))); }
+['q','role','type','state','min'].forEach(id=>$(id).addEventListener('input',render));
+$('saveSearch').onclick=()=>{ Lab.store.set('jobs.search',{q:$('q').value,r:$('role').value,t:$('type').value,st:$('state').value,mn:$('min').value}); Lab.toast('Saved on this device. Real alerts would need email, which is on the idea board.'); };
+const sv=Lab.store.get('jobs.search',null); if(sv){ $('q').value=sv.q; $('role').value=sv.r; $('type').value=sv.t; $('state').value=sv.st; $('min').value=sv.mn; }
+render();
+Lab.chart($('payc'), Object.keys(ROLES).map(r=>{ const js=jobs.filter(j=>j.role===r); return {l:r.split(' ')[0].slice(0,9), v:js.length?Math.round(js.reduce((a,j)=>a+(j.lo+j.hi)/2,0)/js.length):0}; }), {fmt:v=>'$'+Math.round(v), color:'#58a6ff'});
+function draft(){ return {role:$('pTitle').value||'Dental Hygienist',office:$('pOffice').value||'Your Office',city:($('pCity').value||'City, ST').split(',')[0],st:(($('pCity').value||'City, ST').split(',')[1]||'ST').trim(),lo:+$('pLo').value||0,hi:+$('pHi').value||0,type:$('pType').value,days:0,feat:false,perks:[],col:'#238636',desc:$('pDesc').value}; }
+$('preview').onclick=()=>{ const d=draft(); if(!d.lo||!d.hi||d.hi<d.lo){ Lab.toast('A pay range is required (that is the whole point).'); return; } $('pv').innerHTML=''; $('pv').append(card(d,true)); Lab.track('dental-jobs','previews'); };
+$('request').onclick=()=>{ const d=draft(); const text=`Listing request (prototype board): ${d.role} at ${d.office}, ${d.city}, ${d.st} - $${d.lo}-${d.hi}/hr, ${d.type}. ${d.desc}`; navigator.clipboard?.writeText(text).catch(()=>{}); Lab.toast('Copied the listing text. This is a prototype, so nothing was posted or charged.'); window.open(Lab.LINKS.x,'_blank','noopener'); };
+window.__jobs=()=>({shown:$('list').children.length});
+</script></body></html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tooth Defender - private prototype</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css"></head><body><div class="wrap">
+<section class="hero">
+  <span class="pill orange">private prototype · not marketed</span>
+  <h1>A 2-minute brushing game<br>kids actually want to play.</h1>
+  <p class="lead">Tooth Defender is a 3D game where kids scrub plaque critters off a row of teeth. One round lasts exactly <b>two minutes</b>, and a glowing corner moves around the mouth every 30 seconds, the same pattern a proper brush should follow. Finishing earns a printable "Brushing Champion" certificate.</p>
+  <div class="cta-row"><a class="btn primary big" href="play.html">▶ Play the demo</a><a class="btn big" href="play.html?practice=Sunny%20Smiles%20Kids&color=f0883e">see a white-label example</a></div>
+</section>
+<div class="grid g3">
+  <div class="card"><h3>🏥 White-label by URL</h3><p class="muted small"><code>?practice=Name&amp;color=hex</code> puts an office name on the HUD and certificate, and its color on the brush. No accounts.</p></div>
+  <div class="card"><h3>⏱ Teaches the habit</h3><p class="muted small">Two minutes, four zones, 30 seconds each. The game is the timer.</p></div>
+  <div class="card"><h3>📱 Any tablet</h3><p class="muted small">Runs in a browser. No install, no data collected, works offline once loaded.</p></div>
+</div>
+<h2>Prototype notes</h2>
+<div class="card"><ul class="muted small">
+  <li>A personal side project to explore the idea. Not a product, not for sale, not affiliated with any employer or dental brand.</li>
+  <li>Not medical advice. The game is a motivation toy, not brushing instruction.</li>
+  <li>Sponsor and pricing ideas (for example, a monthly fee per office, or oral-care brand sponsors) are hypotheses only, and nothing on this page takes money.</li>
+</ul></div>
+<h2>Idea board</h2><div class="card" id="board"></div>
+<h2>Prototype dashboard</h2><div id="stats"></div>
+</div>
+<script src="../shared/lab.js"></script>
+<script>
+Lab.chrome({id:'tooth-defender', name:'Tooth Defender', icon:'🦷', proto:true, nav:[['play','play.html']]});
+Lab.board(document.getElementById('board'), {product:'Tooth Defender (prototype)', seed:['Sticker collection across days','Parent progress view','Sound effects + music','Lower teeth row']});
+Lab.stats(document.getElementById('stats'), {product:'tooth-defender', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Games played','games']], log:[['Oct 9','Prototype: 2-min round, zone coaching, floss + shield pickups, certificate.']]});
+</script></body></html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dental Build Jam - private prototype</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+.herojam{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:center}@media(max-width:800px){.herojam{grid-template-columns:1fr}}
+#trophy{width:100%;height:340px;display:block}
+.cd{display:flex;gap:10px}.cd div{flex:1;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px}.cd b{display:block;font:700 30px var(--mono);color:#7ee787}.cd span{font-size:12px;color:var(--muted)}
+.tier{position:relative}.tier .n{font:700 22px var(--mono)}
+.gal .card{display:flex;flex-direction:column;gap:6px}.gal .thumb{height:90px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:42px}
+pre{white-space:pre-wrap;word-break:break-all}
+</style></head><body><div class="wrap">
+<section class="hero herojam">
+  <div><span class="pill orange">private prototype · not a real event</span>
+  <h1 style="font-size:38px">Build a tiny tool<br>for the dental chair<br>in 7 days.</h1>
+  <p class="lead">A concept for a week-long jam where devs, dental pros, and students ship small browser tools: explainers, games, calculators. Teams of 1 to 3. Entries have to run in a browser and be free.</p>
+  <div class="cd" id="cd"></div><p class="small muted" style="margin-top:6px">Sample countdown to a hypothetical start date. No event is scheduled.</p></div>
+  <canvas id="trophy"></canvas>
+</section>
+<h2>Rules (draft)</h2>
+<div class="grid g3">
+  <div class="card"><h3>⏱ 7 days</h3><p class="small muted">Start from scratch during the jam. Libraries are fine.</p></div>
+  <div class="card"><h3>🌐 Runs in a browser</h3><p class="small muted">One link and no install. A free tier must exist.</p></div>
+  <div class="card"><h3>🔒 No patient data</h3><p class="small muted">Use sample data only, and nothing that diagnoses.</p></div>
+  <div class="card"><h3>🧑‍⚕️ Ask a pro</h3><p class="small muted">Bonus points for showing it to a real clinician and sharing what they said.</p></div>
+  <div class="card"><h3>📣 Build in public</h3><p class="small muted">Post your progress. The best log wins a prize.</p></div>
+  <div class="card"><h3>⚖️ Judging</h3><p class="small muted">Usefulness 40% · polish 30% · fun 20% · log 10%.</p></div>
+</div>
+<h2>Sample gallery</h2>
+<p class="muted small">These are Alexander's own prototypes, used as stand-in "entries" to show the format.</p>
+<div class="grid g3 gal">
+  <a class="card" href="../tooth-defender/"><div class="thumb" style="background:linear-gradient(135deg,#5a1a2a,#d9536f)">🦷</div><b>Tooth Defender</b><span class="small muted">2-minute 3D brushing game</span></a>
+  <a class="card" href="../chairside-ai/"><div class="thumb" style="background:linear-gradient(135deg,#0b2a4a,#1f6feb)">🧑‍⚕️</div><b>Chairside Explainer</b><span class="small muted">3D procedure explainer with voice</span></a>
+  <a class="card" href="../smile-preview/"><div class="thumb" style="background:linear-gradient(135deg,#1a3a1f,#2ea043)">😁</div><b>Smile Preview</b><span class="small muted">on-device whitening simulation</span></a>
+</div>
+<h2>Sponsor tiers (concept only - not accepting sponsors)</h2>
+<p class="muted small">This shows the rising-price pattern, where each sponsor slot costs more than the one before it. No sponsors are being taken and nothing here charges money.</p>
+<div class="grid g4" id="tiers"></div>
+<h2>Badge for entries</h2>
+<div class="card"><p class="small muted">Entries add one line to get a corner badge that links back to the jam:</p>
+  <input id="ename" value="My Tool" style="width:260px"> <button class="btn" id="copyb">copy snippet</button> <button class="btn" id="tryb">preview badge here</button>
+  <pre class="log" id="snip"></pre></div>
+<h2>Entry form (local preview only)</h2>
+<div class="card"><div class="grid g3"><input id="fn" placeholder="project name"><input id="fu" placeholder="https://link"><input id="ft" placeholder="team (1–3 names)"></div>
+  <button class="btn" id="fadd" style="margin-top:8px">add to my local list</button><div id="flist" class="log small" style="margin-top:8px"></div></div>
+<h2>Idea board</h2><div class="card" id="board"></div>
+<h2>Prototype dashboard</h2><div id="stats"></div>
+</div>
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/lab.js"></script>
+<script>
+Lab.chrome({id:'dental-jam', name:'Dental Build Jam', icon:'🏆', proto:true});
+Lab.board(document.getElementById('board'), {product:'Dental Build Jam (prototype)', seed:['Student track','Clinician judges panel','Live demo stream day','Starter templates repo']});
+Lab.stats(document.getElementById('stats'), {product:'dental-jam', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Local entries','entries']], log:[['Oct 9','Prototype: rules, countdown, 3D trophy, tier ladder concept, badge, local entry list.']]});
+const $=id=>document.getElementById(id);
+// countdown to a hypothetical date: next first-Monday
+const start=(()=>{ const d=new Date(); d.setMonth(d.getMonth()+1,1); while(d.getDay()!==1) d.setDate(d.getDate()+1); d.setHours(9,0,0,0); return d; })();
+function cd(){ let t=Math.max(0,start-new Date())/1000; const v=[['days',86400],['hrs',3600],['min',60],['sec',1]].map(([l,s])=>{const n=Math.floor(t/s); t-=n*s; return `<div><b>${String(n).padStart(2,'0')}</b><span>${l}</span></div>`;}); $('cd').innerHTML=v.join(''); } cd(); setInterval(cd,1000);
+// tiers
+[['Bronze',250],['Silver',500],['Gold',1000],['Title',2000]].forEach(([n,p],i)=>$('tiers').append(Lab.h('div',{class:'card tier'},Lab.h('span',{class:'pill'},'slot '+(i+1)),Lab.h('h3',{},n),Lab.h('div',{class:'n'},'$'+p.toLocaleString()),Lab.h('p',{class:'small muted'},['logo in footer','logo + prize named','logo on every entry badge','"presented by" + judging seat'][i]),Lab.h('button',{class:'btn',disabled:''},'concept only'))));
+// badge
+function snip(){ const base=location.href.replace(/[^/]*$/,''); $('snip').textContent=`<script src="${base}badge.js" data-entry="${$('ename').value.replace(/"/g,'')}" async><\/script>`; } $('ename').oninput=snip; snip();
+$('copyb').onclick=()=>{ navigator.clipboard?.writeText($('snip').textContent); Lab.toast('copied'); };
+$('tryb').onclick=()=>{ const s=document.createElement('script'); s.src='badge.js'; s.dataset.entry=$('ename').value; document.body.append(s); };
+// local entries
+function fl(){ const L=Lab.store.get('jam.entries',[]); $('flist').innerHTML=L.length?L.map(e=>`${e.n} · ${e.t} · ${e.u}`).join('<br>'):'no local entries yet'; }
+$('fadd').onclick=()=>{ const n=$('fn').value.trim(); if(!n) return; const L=Lab.store.get('jam.entries',[]); L.unshift({n,u:$('fu').value.trim(),t:$('ft').value.trim()}); Lab.store.set('jam.entries',L); Lab.track('dental-jam','entries'); fl(); }; fl();
+// 3D trophy: golden cup holding a tooth
+const cv=$('trophy'), R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); R.setPixelRatio(Math.min(devicePixelRatio,2));
+const S=new THREE.Scene(), C=new THREE.PerspectiveCamera(35,1,.1,100); C.position.set(0,2.2,9); C.lookAt(0,1.2,0);
+S.add(new THREE.HemisphereLight(0xffffff,0x0d1117,1.2)); const k=new THREE.PointLight(0x58a6ff,30,20); k.position.set(-3,4,3); S.add(k); const k2=new THREE.PointLight(0x7ee787,25,20); k2.position.set(3,2,3); S.add(k2); const d=new THREE.DirectionalLight(0xffffff,1.5); d.position.set(2,6,5); S.add(d);
+const gold=new THREE.MeshStandardMaterial({color:0xe3b341,metalness:.55,roughness:.3,emissive:0x3a2a00});
+const cup=new THREE.Mesh(new THREE.LatheGeometry([[0,0],[1.1,0],[1.1,.25],[.35,.4],[.25,1.2],[.5,1.5],[1.3,2.2],[1.5,3.1],[1.4,3.15],[1.2,2.3],[0,1.8]].map(p=>new THREE.Vector2(p[0],p[1])),64),gold);
+const G=new THREE.Group(); G.add(cup);
+for(const s of[-1,1]){ const h=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,12,32,Math.PI*1.2),gold); h.position.set(s*1.55,2.45,0); h.rotation.z=s>0?-Math.PI*.6:Math.PI*1.6; G.add(h); }
+const tp=[[0,-1.2],[.2,-1.1],[.35,-.4],[.55,.1],[.75,.5],[.8,.9],[.6,1.15],[.3,1.05],[0,1.15]].map(p=>new THREE.Vector2(p[0],p[1]));
+const tooth=new THREE.Mesh(new THREE.LatheGeometry(tp,48),new THREE.MeshPhysicalMaterial({color:0xffffff,roughness:.15,clearcoat:1})); tooth.position.y=3.6; tooth.scale.setScalar(.9); G.add(tooth);
+const stars=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(Array.from({length:600},()=> (Math.random()-.5)*10),3)),new THREE.PointsMaterial({color:0x58a6ff,size:.05})); S.add(stars);
+G.position.y=-.4; S.add(G);
+function rs(){ const r=cv.getBoundingClientRect(); R.setSize(r.width,r.height,false); C.aspect=r.width/r.height; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+(function loop(t){ requestAnimationFrame(loop); t=(t||0)/1000; G.rotation.y=t*.5; tooth.position.y=3.6+Math.sin(t*2)*.12; tooth.rotation.y=-t; stars.rotation.y=t*.03; R.render(S,C); })();
+</script></body></html>

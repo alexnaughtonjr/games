@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infinite Jam · Stage</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.ui{position:fixed;z-index:5}.panel{background:rgba(22,27,34,.85);border:1px solid var(--border);border-radius:10px;padding:12px;backdrop-filter:blur(6px)}
+#now{top:14px;left:14px;max-width:46vw}#now b{font-family:var(--mono);font-size:20px;display:block}
+#chat{right:14px;top:14px;bottom:14px;width:300px;display:flex;flex-direction:column}
+#q{flex:1;overflow:auto;font-family:var(--mono);font-size:13px}#q div{padding:6px 0;border-bottom:1px solid #21262d}#q .cur{color:#3fb950}
+#src{left:14px;bottom:14px;display:flex;gap:6px;flex-wrap:wrap}
+#brk{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:6;background:rgba(13,17,23,.75)}
+.stream #chat,.stream #src{display:none}
+#start{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(13,17,23,.8)}
+@media(max-width:700px){#chat{top:auto;height:40vh;width:auto;left:14px}#now{max-width:90vw}}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="ui panel" id="now"><span class="pill green" id="mode">built-in groove</span><b id="title">warming up…</b><span class="small muted" id="by"></span></div>
+<div class="ui panel" id="chat">
+  <div class="mono small muted">prompt queue: describe a vibe and the stage morphs into it</div>
+  <div id="q"></div>
+  <input id="nm" placeholder="your name" maxlength="14" style="margin:6px 0">
+  <div style="display:flex;gap:6px"><input id="pr" placeholder='e.g. "neon rain over tokyo"' maxlength="80"><button class="btn primary" id="send">↵</button></div>
+  <div class="small muted" style="margin-top:6px">try: ocean · fire · space · city · rain · love · forest · storm · gold · ice · 140 bpm</div>
+</div>
+<div class="ui" id="src">
+  <button class="btn" id="synth">🎛 built-in groove</button>
+  <button class="btn" id="mic">🎤 mic / line-in</button>
+  <label class="btn" style="margin:0">🎵 audio file<input type="file" id="file" accept="audio/*" hidden></label>
+  <button class="btn" id="streamBtn">⛶ stream mode (H)</button>
+  <a class="btn" href="./">←</a>
+</div>
+<div id="brk"><div class="panel" style="text-align:center;max-width:460px"><div class="pill">segment break</div><h1 id="brkT" style="font-size:30px">YOUR AD HERE</h1><p class="muted" id="brkS">This 10-second break is a sponsor slot · DM @alexnaughtonjr</p></div></div>
+<div id="start"><div class="panel" style="max-width:420px;text-align:center"><h1 style="font-size:30px">INFINITE JAM</h1><p class="muted">An audio-reactive 3D stage that viewers steer with words. Click to start the sound. Browsers need a click before playing audio.</p><button class="btn primary big" id="go">▶ Start the stage</button></div></div>
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/lab.js"></script>
+<script src="director.js"></script>
+<script>
+(() => {
+const SPONSORS = []; // {name, tagline} once sold
+const $ = id => document.getElementById(id);
+// ---------- audio
+let actx, analyser, freq, srcNode, synth = null;
+function ensureAudio(){ if (actx) return; actx = new (window.AudioContext||window.webkitAudioContext)(); analyser = actx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = .8; freq = new Uint8Array(analyser.frequencyBinCount); analyser.connect(actx.destination); }
+function routeOut(on){ try{analyser.disconnect();}catch(e){} if(on) analyser.connect(actx.destination); }
+function stopSrc(){ if (synth) { synth.stop(); synth=null; } if (srcNode) { try{srcNode.disconnect();}catch(e){} srcNode=null; } }
+function startSynth(){ ensureAudio(); stopSrc(); routeOut(true); synth = makeSynth(actx, analyser); $('mode').textContent='built-in groove · '+bpm+' bpm'; }
+let bpm = 104;
+function makeSynth(ctx, out){
+  // tiny generative groove: kick, hat, bass, pad arps - all oscillators, no samples
+  const master = ctx.createGain(); master.gain.value = .55; master.connect(out);
+  let step = 0, next = ctx.currentTime + .05, alive = true; const scale=[0,3,5,7,10,12,15];
+  function note(f, t, d, type, g){ const o=ctx.createOscillator(), a=ctx.createGain(); o.type=type; o.frequency.value=f; a.gain.setValueAtTime(g,t); a.gain.exponentialRampToValueAtTime(.0008,t+d); o.connect(a); a.connect(master); o.start(t); o.stop(t+d+.02); }
+  function kick(t){ const o=ctx.createOscillator(), a=ctx.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+.15); a.gain.setValueAtTime(.9,t); a.gain.exponentialRampToValueAtTime(.001,t+.3); o.connect(a); a.connect(master); o.start(t); o.stop(t+.32); }
+  function hat(t){ const b=ctx.createBuffer(1, ctx.sampleRate*.05, ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); const s=ctx.createBufferSource(); s.buffer=b; const f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000; const g=ctx.createGain(); g.gain.value=.25; s.connect(f); f.connect(g); g.connect(master); s.start(t); }
+  const timer = setInterval(() => { const sp = 60/bpm/4; while (next < ctx.currentTime + .15) { const s = step%16, root = 110*Math.pow(2, Director.state.key/12);
+      if (s%4===0) kick(next); if (s%2===1) hat(next);
+      if (s%4===2 || s===15) note(root/2*Math.pow(2,scale[(step>>4)%3]/12), next, sp*1.8, 'sawtooth', .18);
+      if (Math.random() < Director.state.density) note(root*2*Math.pow(2, scale[Math.floor(Math.random()*scale.length)]/12), next, sp*3, Director.state.wave, .07);
+      next += sp; step++; } }, 25);
+  return { stop(){ alive=false; clearInterval(timer); master.disconnect(); } };
+}
+$('synth').onclick = () => startSynth();
+$('mic').onclick = async () => { try { ensureAudio(); const s = await navigator.mediaDevices.getUserMedia({audio:true}); stopSrc(); srcNode = actx.createMediaStreamSource(s); srcNode.connect(analyser); routeOut(false); /* don't echo the mic back */ $('mode').textContent='live mic'; } catch(e){ Lab.toast('Mic blocked: allow it in the browser'); } };
+$('file').onchange = e => { const f = e.target.files[0]; if (!f) return; ensureAudio(); stopSrc(); routeOut(true); const a = new Audio(URL.createObjectURL(f)); a.loop = true; a.play(); srcNode = actx.createMediaElementSource(a); srcNode.connect(analyser); $('mode').textContent='track: '+f.name.slice(0,28); };
+$('go').onclick = () => { $('start').style.display='none'; startSynth(); Lab.track('infinite-jam','sessions'); };
+
+// ---------- 3D stage
+const R = new THREE.WebGLRenderer({canvas:$('c'), antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2));
+const S = new THREE.Scene(); S.background = new THREE.Color(0x0d1117); S.fog = new THREE.FogExp2(0x0d1117,.02); const C = new THREE.PerspectiveCamera(60,1,.1,400); C.position.set(0,0,14);
+function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+const U = { t:{value:0}, bass:{value:0}, mid:{value:0}, high:{value:0}, c1:{value:new THREE.Color()}, c2:{value:new THREE.Color()}, spike:{value:1} };
+const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(3.2, 64), new THREE.ShaderMaterial({uniforms:U,
+  vertexShader:`uniform float t,bass,mid,high,spike; varying float vN; varying vec3 vNorm;
+  vec3 h3(vec3 p){p=fract(p*.3183+.1);p*=17.;return fract(vec3(p.x*p.y*p.z,p.x+p.y*p.z,p.x*p.y+p.z));}
+  float n3(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(h3(i).x,h3(i+vec3(1,0,0)).x,f.x),mix(h3(i+vec3(0,1,0)).x,h3(i+vec3(1,1,0)).x,f.x),f.y),mix(mix(h3(i+vec3(0,0,1)).x,h3(i+vec3(1,0,1)).x,f.x),mix(h3(i+vec3(0,1,1)).x,h3(i+vec3(1,1,1)).x,f.x),f.y),f.z);}
+  void main(){ float n=n3(normal*spike+vec3(t*.4)); float d=n*(.4+bass*1.6)+sin(position.y*3.+t*2.)*mid*.25; vN=n; vNorm=normalize(normalMatrix*normal); vec3 p=position+normal*d; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
+  fragmentShader:`uniform vec3 c1,c2; uniform float high; varying float vN; varying vec3 vNorm; void main(){ float f=pow(1.-abs(dot(vNorm,vec3(0,0,1))),2.); vec3 c=mix(c1,c2,vN)+f*(c2*1.2)+high*.25; gl_FragColor=vec4(c,1.);}`}));
+S.add(blob);
+// frequency ring
+const BARS = 96, bars = [];
+const barMat = new THREE.MeshBasicMaterial({color:0xffffff});
+for (let i=0;i<BARS;i++){ const m=new THREE.Mesh(new THREE.BoxGeometry(.12,1,.12), new THREE.MeshBasicMaterial({color:0x58a6ff})); const a=i/BARS*Math.PI*2; m.position.set(Math.cos(a)*6.2,Math.sin(a)*6.2,0); m.rotation.z=a-Math.PI/2; S.add(m); bars.push(m); }
+// tunnel rings
+const rings=[]; for(let i=0;i<24;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(10,.04,6,64), new THREE.MeshBasicMaterial({color:0xbc8cff, transparent:true, opacity:.5})); r.position.z=-i*8; S.add(r); rings.push(r); }
+// particles (rain/stars/embers/hearts depending on director)
+const PN = 1800, pg = new THREE.BufferGeometry(), pp = new Float32Array(PN*3), pv = new Float32Array(PN);
+for (let i=0;i<PN;i++){ pp[i*3]=(Math.random()-.5)*60; pp[i*3+1]=(Math.random()-.5)*40; pp[i*3+2]=(Math.random()-.5)*60-10; pv[i]=Math.random(); }
+pg.setAttribute('position', new THREE.BufferAttribute(pp,3));
+const pm = new THREE.PointsMaterial({color:0xffffff, size:.12, transparent:true, opacity:.8, blending:THREE.AdditiveBlending, depthWrite:false});
+S.add(new THREE.Points(pg, pm));
+// city towers (shown for city prompts)
+const city = new THREE.Group(); for(let i=0;i<70;i++){ const h=2+Math.random()*14; const m=new THREE.Mesh(new THREE.BoxGeometry(1.4,h,1.4), new THREE.MeshBasicMaterial({color:0x161b22, wireframe:Math.random()<.5})); const x=(Math.random()<.5?-1:1)*(7+Math.random()*30); m.position.set(x, -10+h/2, -12-Math.random()*40); city.add(m);} S.add(city);
+
+// ---------- director + chat queue
+const qEl = $('q'); $('nm').value = Lab.store.get('jam.name','');
+function drawQ(){ qEl.innerHTML = Director.history.slice(-30).reverse().map((p,i)=>`<div class="${i===0?'cur':''}">${i===0?'▶ ':''}${esc(p.text)} <span class="muted">· ${esc(p.by)}</span></div>`).join('') + Director.queue.map(p=>`<div class="muted">⏳ ${esc(p.text)} · ${esc(p.by)}</div>`).join(''); }
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function send(){ const t=$('pr').value.trim(); if(!t) return; const by=($('nm').value.trim()||'anon').slice(0,14); Lab.store.set('jam.name',by); Director.enqueue(t, by); $('pr').value=''; drawQ(); Lab.track('infinite-jam','prompts'); }
+$('send').onclick = send; $('pr').addEventListener('keydown', e => e.key==='Enter' && send());
+Director.onChange = s => { $('title').textContent = s.text; $('by').textContent = 'prompt by '+s.by+' · '+s.tags.join(', '); if (synth && s.bpm) { bpm = s.bpm; $('mode').textContent='built-in groove · '+bpm+' bpm'; } drawQ(); };
+Director.onBreak = (on, idx) => { const s = SPONSORS[idx % Math.max(1,SPONSORS.length)]; $('brk').style.display = on?'flex':'none'; $('brkT').textContent = s?s.name:'YOUR AD HERE'; $('brkS').textContent = s?(s.tagline||''):`segment-break slot ${idx%3+1} · $${[100,200,400][idx%3]}/mo · DM @alexnaughtonjr`; };
+Director.start();
+addEventListener('keydown', e => { if ((e.key==='h'||e.key==='H') && document.activeElement.tagName!=='INPUT') document.body.classList.toggle('stream'); });
+$('streamBtn').onclick = () => document.body.classList.toggle('stream');
+
+const clk = new THREE.Clock(); const tmpC = new THREE.Color();
+function loop(){ requestAnimationFrame(loop); const dt=Math.min(clk.getDelta(),.05); U.t.value += dt*Director.state.speed;
+  let b=0,m=0,h=0; if (analyser){ analyser.getByteFrequencyData(freq); for(let i=0;i<8;i++) b+=freq[i]; for(let i=8;i<60;i++) m+=freq[i]; for(let i=60;i<160;i++) h+=freq[i]; b/=8*255; m/=52*255; h/=100*255; }
+  U.bass.value += (b-U.bass.value)*.3; U.mid.value += (m-U.mid.value)*.3; U.high.value += (h-U.high.value)*.3;
+  const st = Director.state; U.c1.value.lerp(tmpC.set(st.c1), .03); U.c2.value.lerp(tmpC.set(st.c2), .03); U.spike.value += (st.spike-U.spike.value)*.03;
+  S.background = (S.background||new THREE.Color()).lerp(tmpC.set(st.bg), .03); S.fog = S.fog || new THREE.FogExp2(0,.02); S.fog.color.copy(S.background); S.fog.density += (st.fog-S.fog.density)*.03;
+  blob.rotation.y += dt*.2*st.speed; blob.rotation.x += dt*.07; blob.scale.setScalar(1+U.bass.value*.25);
+  bars.forEach((bar,i)=>{ const v = analyser ? freq[Math.floor(i/BARS*120)]/255 : .1; bar.scale.y = .2+v*5; bar.material.color.copy(U.c2.value).lerp(U.c1.value, i/BARS); });
+  rings.forEach(r=>{ r.position.z += dt*(6+U.bass.value*30)*st.speed; if (r.position.z>14) r.position.z -= 192; r.material.color.copy(U.c2.value); r.rotation.z += dt*.1; });
+  const pos = pg.attributes.position.array; pm.color.lerp(tmpC.set(st.pc), .05); pm.size = st.psize;
+  for (let i=0;i<PN;i++){ const k=i*3; pos[k+1] += st.pvy*dt*(1+pv[i]); pos[k] += st.pvx*dt; if (st.swirl) { const a=dt*.3*st.swirl; const x=pos[k], z=pos[k+2]+10; pos[k]=x*Math.cos(a)-z*Math.sin(a); pos[k+2]=x*Math.sin(a)+z*Math.cos(a)-10; }
+    if (pos[k+1]<-20) pos[k+1]=20; if (pos[k+1]>20) pos[k+1]=-20; if (pos[k]>30) pos[k]=-30; if (pos[k]<-30) pos[k]=30; }
+  pg.attributes.position.needsUpdate = true;
+  city.visible = st.city; city.rotation.y += dt*.03;
+  C.position.x = Math.sin(U.t.value*.2)*2; C.position.y = Math.cos(U.t.value*.15)*1.5; C.lookAt(0,0,0);
+  R.render(S,C);
+}
+loop();
+window.__jam = () => ({state:Director.state.text, queue:Director.queue.length, bass:+U.bass.value.toFixed(3)});
+})();
+</script></body></html>

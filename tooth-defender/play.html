@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Tooth Defender (prototype)</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>html,body{height:100%;overflow:hidden;touch-action:none}canvas#c{position:fixed;inset:0;cursor:none}
+.hud{position:fixed;top:10px;left:0;right:0;display:flex;justify-content:center;gap:10px;z-index:5;font-family:var(--mono);pointer-events:none;flex-wrap:wrap}
+.hud .pill{background:rgba(13,17,23,.8);font-size:14px;padding:6px 12px}
+#quad{position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:5;font-family:var(--mono);font-size:16px;color:#7ee787;text-shadow:0 0 10px #238636;pointer-events:none}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9;background:rgba(13,17,23,.72)}
+.ov .card{max-width:440px;text-align:center}.proto{position:fixed;bottom:0;left:0;right:0;z-index:4}
+#cert{max-width:100%;border-radius:10px;margin-top:10px}</style></head><body>
+<canvas id="c"></canvas>
+<div class="hud"><span class="pill green" id="tm">⏱ 2:00</span><span class="pill blue" id="sc">⭐ 0</span><span class="pill" id="hp">🦷 100%</span><span class="pill" id="pr"></span></div>
+<div id="quad"></div>
+<div class="ov" id="ov"><div class="card">
+  <span class="pill orange">private prototype · not a product</span>
+  <h1 style="font-size:32px">🦷 TOOTH DEFENDER</h1>
+  <p class="muted">Plaque critters are sneaking onto the teeth! Move the toothbrush over them to scrub them away. Brush the <b style="color:#7ee787">glowing corner</b> for double stars. A whole game lasts <b>2 minutes</b>, the same time a good brush takes.</p>
+  <p class="small muted">Mouse or finger moves the brush · grab ✨ floss to clear a whole row · 💧 shields a tooth</p>
+  <div id="res"></div>
+  <button class="btn primary big" id="go">▶ Start brushing</button>
+</div></div>
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/lab.js"></script>
+<script>
+(() => {
+const q = new URLSearchParams(location.search);
+const practice = (q.get('practice')||'').slice(0,32), accent = /^[0-9a-f]{6}$/i.test(q.get('color')||'') ? '#'+q.get('color') : '#58a6ff';
+document.getElementById('pr').textContent = practice ? '🏥 '+practice : 'demo office';
+const $=id=>document.getElementById(id);
+const R=new THREE.WebGLRenderer({canvas:$('c'),antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2)); R.shadowMap.enabled=true;
+const S=new THREE.Scene(); S.background=new THREE.Color(0x2a0a14); S.fog=new THREE.Fog(0x2a0a14,18,40);
+const C=new THREE.PerspectiveCamera(50,1,.1,100); C.position.set(0,9,13); C.lookAt(0,0,-.5);
+function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+S.add(new THREE.HemisphereLight(0xffffff,0x662233,1.8)); const fl=new THREE.DirectionalLight(0xffffff,1.6); fl.position.set(0,6,14); S.add(fl); const sl=new THREE.SpotLight(0xffffff,60,40,.6,.5); sl.position.set(0,14,6); sl.castShadow=true; S.add(sl);
+// tongue + gums
+const tongue=new THREE.Mesh(new THREE.SphereGeometry(4,32,16), new THREE.MeshStandardMaterial({color:0xd9536f,roughness:.6})); tongue.scale.set(1.2,.25,1.1); tongue.position.set(0,-.6,.2); tongue.receiveShadow=true; S.add(tongue);
+const gumMat=new THREE.MeshStandardMaterial({color:0xe07a8f,roughness:.5});
+const gum=new THREE.Mesh(new THREE.TorusGeometry(5.2,.9,16,64,Math.PI*1.15), gumMat); gum.rotation.x=-Math.PI/2; gum.rotation.z=-Math.PI*0.075+Math.PI; gum.position.y=-.2; gum.scale.set(1,1.1,.5); S.add(gum);
+// teeth along the arch
+const teeth=[]; const N=12;
+const toothGeo=new THREE.CapsuleGeometry(.48,.7,6,12);
+for(let i=0;i<N;i++){ const a=Math.PI*(0.08+0.84*i/(N-1)); const x=Math.cos(a)*5.2, z=-Math.sin(a)*5.2*1.1+2.6;
+  const m=new THREE.Mesh(toothGeo,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.25,metalness:.05,emissive:0x000000})); m.position.set(x,.7,z); m.castShadow=true; m.scale.set(i>2&&i<9?.85:1.15,1,1); S.add(m);
+  const quad = (x<0?'left':'right'), half = i<N/2;
+  teeth.push({m, hp:100, shield:0, quad: i<3?'right back':i<6?'right front':i<9?'left front':'left back', i}); }
+const QUADS=['left back','left front','right front','right back'];
+// brush
+const brush=new THREE.Group();
+const handle=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,4,12),new THREE.MeshStandardMaterial({color:new THREE.Color(accent),roughness:.3})); handle.rotation.z=Math.PI/2; handle.position.x=2.2; brush.add(handle);
+const head=new THREE.Mesh(new THREE.BoxGeometry(1.1,.25,.5),new THREE.MeshStandardMaterial({color:new THREE.Color(accent)})); brush.add(head);
+for(let i=0;i<14;i++){ const b=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.5,5),new THREE.MeshStandardMaterial({color:i%2?0xffffff:0x7ee7ff})); b.position.set(-.45+(i%7)*.15,-.35,i<7?-.12:.12); brush.add(b); }
+brush.position.set(0,2,0); S.add(brush);
+// foam particles
+const foam=[]; function puff(p){ for(let i=0;i<3;i++){ const f=new THREE.Mesh(new THREE.SphereGeometry(.12+Math.random()*.12,8,6),new THREE.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.9})); f.position.copy(p).add(new THREE.Vector3((Math.random()-.5)*.8,Math.random()*.4,(Math.random()-.5)*.8)); f.userData.l=.8; S.add(f); foam.push(f);} }
+// critters
+const critters=[]; const cGeo=new THREE.IcosahedronGeometry(.42,1);
+function critter(){ const t=teeth[Math.floor(Math.random()*N)]; const g=new THREE.Group();
+  const body=new THREE.Mesh(cGeo,new THREE.MeshStandardMaterial({color:[0x7ee787,0xd29922,0xa371f7][Math.floor(Math.random()*3)],roughness:.9,flatShading:true})); g.add(body);
+  for(const s of[-1,1]){ const e=new THREE.Mesh(new THREE.SphereGeometry(.11,8,6),new THREE.MeshBasicMaterial({color:0xffffff})); e.position.set(s*.16,.15,.33); const p=new THREE.Mesh(new THREE.SphereGeometry(.05,6,4),new THREE.MeshBasicMaterial({color:0x000000})); p.position.set(s*.16,.15,.42); g.add(e,p); }
+  const from=new THREE.Vector3(t.m.position.x*1.35,0,t.m.position.z*1.1+.6); g.position.copy(from); S.add(g); critters.push({g,body,t,scrub:0,from,arrive:0}); }
+const pickups=[];
+function pickup(){ const kind=Math.random()<.5?'floss':'shield'; const m=new THREE.Mesh(new THREE.OctahedronGeometry(.35),new THREE.MeshBasicMaterial({color:kind==='floss'?0xffffff:0x58a6ff})); m.position.set((Math.random()-.5)*6,1.6,(Math.random()-.5)*3+.5); m.userData.kind=kind; S.add(m); pickups.push(m); }
+// input → brush on a plane
+const ray=new THREE.Raycaster(), mv=new THREE.Vector2(), plane=new THREE.Plane(new THREE.Vector3(0,1,0),-1.4), hit=new THREE.Vector3(), target=new THREE.Vector3(0,1.4,0);
+function pm(e){ const t=e.touches?e.touches[0]:e; mv.set(t.clientX/innerWidth*2-1,-(t.clientY/innerHeight)*2+1); ray.setFromCamera(mv,C); if(ray.ray.intersectPlane(plane,hit)) target.copy(hit); }
+addEventListener('pointermove',pm); addEventListener('touchmove',e=>{pm(e);e.preventDefault();},{passive:false}); addEventListener('touchstart',pm);
+let run=false, T=120, score=0, spawnT=0, quadI=0, lastPos=new THREE.Vector3();
+function start(){ critters.forEach(c=>S.remove(c.g)); critters.length=0; pickups.forEach(p=>S.remove(p)); pickups.length=0; teeth.forEach(t=>{t.hp=100;t.shield=0;t.m.material.color.set(0xffffff);}); run=true; T=120; score=0; $('ov').style.display='none'; Lab.track('tooth-defender','games'); }
+$('go').onclick=start;
+function end(){ run=false; const avg=Math.round(teeth.reduce((a,t)=>a+t.hp,0)/N); const stars = avg>85?3:avg>60?2:1;
+  const cv=document.createElement('canvas'); cv.width=800; cv.height=500; const c=cv.getContext('2d'); c.fillStyle='#0d1117'; c.fillRect(0,0,800,500); c.strokeStyle=accent; c.lineWidth=10; c.strokeRect(15,15,770,470);
+  c.fillStyle='#e6edf3'; c.textAlign='center'; c.font='bold 44px JetBrains Mono, monospace'; c.fillText('BRUSHING CHAMPION',400,110); c.font='90px serif'; c.fillText('⭐'.repeat(stars),400,230);
+  c.font='28px JetBrains Mono, monospace'; c.fillText(`${score} sparkle points · teeth ${avg}% healthy`,400,300); c.fillStyle='#8b949e'; c.font='24px JetBrains Mono, monospace'; c.fillText('brushed for the full 2 minutes!',400,350);
+  c.fillText(practice?('from your friends at '+practice):'Tooth Defender · prototype',400,420); c.fillText(new Date().toLocaleDateString(),400,455);
+  $('res').innerHTML=`<p class="mono"><b style="font-size:26px">${'⭐'.repeat(stars)}</b><br>${score} points · teeth ${avg}% healthy</p>`; const img=new Image(); img.id='cert'; img.src=cv.toDataURL(); $('res').append(img);
+  const dl=Lab.h('a',{class:'btn',download:'brushing-champion.png',href:img.src,style:'margin:8px 0'},'⬇ save certificate'); $('res').append(Lab.h('div',{},dl));
+  $('go').textContent='▶ Brush again'; $('ov').style.display='flex'; }
+const clk=new THREE.Clock(); const tmp=new THREE.Vector3();
+(function loop(){ requestAnimationFrame(loop); const dt=Math.min(clk.getDelta(),.05), t=performance.now()/1000;
+  brush.position.lerp(target,.35); const speed=brush.position.distanceTo(lastPos)/dt; lastPos.copy(brush.position); brush.rotation.y=Math.sin(t*20)*Math.min(.3,speed*.02);
+  if(run){ T-=dt; if(T<=0){T=0; end();}
+    const qn=Math.min(3,Math.floor((120-T)/30)); quadI=qn; $('quad').textContent=`✨ brush the ${QUADS[qn]} teeth now!`;
+    teeth.forEach(tt=>{ const glow = tt.quad===QUADS[qn]; tt.m.material.emissive.setHex(glow?0x1f6f2a:0x000000); tt.m.material.color.setRGB(1, .75+.25*tt.hp/100, .45+.55*tt.hp/100); if(tt.shield>0){tt.shield-=dt; tt.m.material.emissive.setHex(0x0a2a5a);} });
+    spawnT-=dt; const rate=Math.max(.45, 1.6-(120-T)/90); if(spawnT<=0){ spawnT=rate; critter(); if(Math.random()<.12) pickup(); }
+    for(let i=critters.length-1;i>=0;i--){ const c=critters[i]; c.arrive=Math.min(1,c.arrive+dt*.35); tmp.copy(c.from).lerp(tmp.set(c.t.m.position.x,1.3,c.t.m.position.z),c.arrive); c.g.position.copy(tmp); c.g.position.y+=Math.abs(Math.sin(t*8+i))*.2; c.g.lookAt(C.position);
+      if(c.arrive>=1 && c.t.shield<=0) c.t.hp=Math.max(0,c.t.hp-dt*6);
+      const d=Math.hypot(brush.position.x-c.g.position.x, brush.position.z-c.g.position.z);
+      if(d<1){ c.scrub+=dt*(1+Math.min(3,speed*.15)); c.body.scale.setScalar(Math.max(.2,1-c.scrub*1.6)); if(Math.random()<.4) puff(c.g.position);
+        if(c.scrub>.5){ const bonus=c.t.quad===QUADS[qn]?2:1; score+=10*bonus; S.remove(c.g); critters.splice(i,1); } } }
+    for(let i=pickups.length-1;i>=0;i--){ const p=pickups[i]; p.rotation.y+=dt*3; if(p.position.distanceTo(brush.position)<1){ if(p.userData.kind==='floss'){ score+=10*critters.length; critters.forEach(c=>{puff(c.g.position);S.remove(c.g);}); critters.length=0; Lab.toast('✨ FLOSS - all clear!',1000);} else { teeth.forEach(tt=>{ if(tt.quad===QUADS[qn]) tt.shield=8; }); Lab.toast('💧 fluoride shield!',1000);} S.remove(p); pickups.splice(i,1);} }
+    const avg=Math.round(teeth.reduce((a,t)=>a+t.hp,0)/N);
+    $('tm').textContent=`⏱ ${Math.floor(T/60)}:${String(Math.floor(T%60)).padStart(2,'0')}`; $('sc').textContent='⭐ '+score; $('hp').textContent='🦷 '+avg+'%';
+  }
+  for(let i=foam.length-1;i>=0;i--){ const f=foam[i]; f.userData.l-=dt; f.position.y+=dt*.6; f.material.opacity=f.userData.l; if(f.userData.l<=0){S.remove(f);foam.splice(i,1);} }
+  R.render(S,C); })();
+window.__td=()=>({run,T:Math.round(T),score,critters:critters.length});
+})();
+</script></body></html>

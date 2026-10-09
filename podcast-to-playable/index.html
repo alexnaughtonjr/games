@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Podcast to Playable - turn any episode into quote cards + a playable 3D quiz</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>textarea{min-height:200px;font-family:var(--mono);font-size:13px}
+.qc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.qc figure{margin:0}.qc canvas{width:100%;border-radius:10px;border:1px solid var(--border);display:block}
+.qc figcaption{display:flex;gap:6px;margin-top:6px}.kw span{display:inline-block;margin:3px}
+.out{display:none}.chap div{font-family:var(--mono);font-size:13px;padding:4px 0;border-bottom:1px solid #21262d}.chap b{color:var(--blue);margin-right:10px}</style>
+</head><body><div class="wrap">
+<section class="hero">
+  <span class="pill green">free · runs in your browser · no upload</span>
+  <h1>Paste an episode.<br>Get clips your audience can <i>play</i>.</h1>
+  <p class="lead">Drop in a podcast or live-stream transcript. You get the most quotable lines as share-ready cards, auto chapters, topics, and a <b>3D quiz game</b> built from the episode that you can share as a link. No server, no AI bill, and your transcript never leaves your device.</p>
+</section>
+<div class="card">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+    <input id="title" placeholder="Episode title" style="flex:1;min-width:200px" value="">
+    <label class="btn" style="margin:0">📄 .txt / .srt / .vtt<input type="file" id="file" accept=".txt,.srt,.vtt,text/plain" hidden></label>
+    <button class="btn" id="sample">try a sample episode</button>
+  </div>
+  <textarea id="tx" placeholder="Paste a transcript. 'Name: line' speaker labels and [mm:ss] timestamps make it even better."></textarea>
+  <div class="cta-row"><button class="btn primary big" id="go">⚡ Make it playable</button><span class="muted small" id="cnt"></span></div>
+</div>
+<div class="out" id="out">
+  <h2>🎮 Your episode game</h2>
+  <div class="card"><p id="qinfo" class="muted"></p><div class="cta-row"><a class="btn primary big" id="playBtn" target="_blank">▶ Play the 3D quiz</a><button class="btn big" id="copyBtn">🔗 Copy share link</button></div>
+    <p class="small muted">The whole quiz is packed into the link itself. Post it in your show notes or bio.</p></div>
+  <h2>🃏 Quote cards</h2><div class="qc" id="cards"></div>
+  <div class="grid g2" style="margin-top:8px">
+    <div><h2>🧭 Chapters</h2><div class="card chap" id="chap"></div></div>
+    <div><h2>🏷 Topics</h2><div class="card kw" id="kw"></div></div>
+  </div>
+</div>
+<h2>Plans</h2>
+<div class="grid g3">
+  <div class="card"><h3>Free</h3><p class="muted small">Everything on this page, unlimited, forever. It runs on your device.</p></div>
+  <div class="card"><h3>Creator · soon</h3><p class="muted small">Your logo and colors on cards, MP4 audiograms, and a quiz leaderboard. Want it? Vote on the board, and I'll only charge once it exists.</p><div id="up"></div></div>
+  <div class="card"><h3>Sponsor</h3><p class="muted small">"Quiz presented by" line on every shared game.</p><a class="btn" href="#sponsor">see slots</a></div>
+</div>
+<h2 id="sponsor">Sponsor slots</h2><div id="slots"></div>
+<h2>Open dashboard</h2><div id="stats"></div>
+<h2>Feature requests</h2><div class="card" id="board"></div>
+</div>
+<script src="../shared/lab.js"></script>
+<script src="engine.js"></script>
+<script>
+Lab.chrome({id:'podcast-to-playable', name:'Podcast → Playable', icon:'🎙', nav:[['make','#']]});
+Lab.upgrade(document.getElementById('up'), {amount:5, label:'♥ Back it - $5', note:'Podcast to Playable'});
+Lab.sponsors(document.getElementById('slots'), {product:'Podcast to Playable', base:75, mult:2, slots:3, placement:'"Quiz presented by" on every shared game'});
+Lab.stats(document.getElementById('stats'), {product:'podcast-to-playable', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Episodes made','made']], log:[['Oct 9','v1: quote scoring, cards, chapters, link-packed 3D quiz.']]});
+Lab.board(document.getElementById('board'), {product:'Podcast to Playable', seed:['Audio upload with in-browser transcription','Audiogram video export','Custom card themes','Quiz leaderboard']});
+const $=id=>document.getElementById(id);
+$('tx').oninput = () => $('cnt').textContent = $('tx').value.split(/\s+/).filter(Boolean).length+' words';
+$('sample').onclick = async () => { $('tx').value = await (await fetch('sample.txt')).text(); $('title').value='Late Night Build Session #1 (sample)'; $('tx').oninput(); };
+$('file').onchange = async e => { const f=e.target.files[0]; if(!f) return; $('tx').value = await f.text(); if(!$('title').value) $('title').value=f.name.replace(/\.\w+$/,''); $('tx').oninput(); };
+function wrap(c, text, x, y, maxW, lh){ const words=text.split(' '); let line='', lines=[]; for(const w of words){ const t=line?line+' '+w:w; if(c.measureText(t).width>maxW && line){ lines.push(line); line=w; } else line=t; } lines.push(line); lines.forEach((l,i)=>c.fillText(l,x,y+i*lh)); return lines.length; }
+function card(q, i, title){
+  const cv=document.createElement('canvas'); cv.width=1080; cv.height=1350; const c=cv.getContext('2d');
+  const themes=[['#0d1117','#1f6feb'],['#0d1117','#238636'],['#0d1117','#8957e5'],['#0d1117','#d29922']]; const [bg,ac]=themes[i%4];
+  c.fillStyle=bg; c.fillRect(0,0,1080,1350); const g=c.createRadialGradient(900,150,10,900,150,900); g.addColorStop(0,ac+'66'); g.addColorStop(1,'transparent'); c.fillStyle=g; c.fillRect(0,0,1080,1350);
+  c.fillStyle=ac; c.fillRect(90,160,16,120); c.font='bold 200px JetBrains Mono, monospace'; c.fillStyle=ac+'aa'; c.fillText('“',80,300);
+  c.fillStyle='#e6edf3'; let size = q.s.length>140?56:q.s.length>90?64:74; c.font=`bold ${size}px Inter, system-ui, sans-serif`;
+  const n = wrap(c, q.s, 90, 400, 900, size*1.28);
+  c.font='34px JetBrains Mono, monospace'; c.fillStyle='#8b949e'; c.fillText((q.sp?'- '+q.sp+' · ':'')+q.ts, 90, 400+n*size*1.28+60);
+  c.fillStyle='#30363d'; c.fillRect(90,1180,900,2); c.fillStyle='#e6edf3'; c.font='bold 32px JetBrains Mono, monospace'; c.fillText(title.slice(0,40), 90, 1250);
+  c.fillStyle='#8b949e'; c.font='26px JetBrains Mono, monospace'; c.fillText('play the episode quiz → link in bio', 90, 1295);
+  return cv;
+}
+$('go').onclick = async () => {
+  const raw=$('tx').value.trim(); if (raw.split(/\s+/).length < 40) return Lab.toast('Paste a longer transcript (40+ words) or try the sample');
+  const title=$('title').value.trim()||'Episode'; const a=P2P.analyze(raw); const quiz=P2P.makeQuiz(a, title);
+  Lab.track('podcast-to-playable','made');
+  $('out').style.display='block';
+  const cards=$('cards'); cards.innerHTML=''; a.quotes.slice(0,6).forEach((q,i)=>{ const cv=card(q,i,title); const f=Lab.h('figure',{}, cv, Lab.h('figcaption',{}, Lab.h('button',{class:'btn',onclick:()=>{ const l=document.createElement('a'); l.download=`quote-${i+1}.png`; l.href=cv.toDataURL('image/png'); l.click(); }},'⬇ PNG'), Lab.h('button',{class:'btn',onclick:()=>navigator.clipboard.writeText(`"${q.s}"${q.sp?' - '+q.sp:''}`).then(()=>Lab.toast('Quote copied'))},'copy text'))); cards.append(f); });
+  $('chap').innerHTML = a.chapters.map(c=>`<div><b>${c.ts}</b>${c.title.replace(/</g,'&lt;')}</div>`).join('') || '<div class="muted">Add [mm:ss] timestamps for chapters</div>';
+  $('kw').innerHTML = a.keywords.slice(0,18).map((k,i)=>`<span class="pill ${i<5?'green':''}">${k}</span>`).join('');
+  const code = await P2P.pack(quiz); const url = new URL('play.html#'+code, location.href).href;
+  $('playBtn').href = url; $('qinfo').textContent = `${quiz.qs.length} questions built from "${title}" · ${a.speakers.length?'speakers: '+a.speakers.join(', ')+' · ':''}${a.sentences.length} sentences analyzed`;
+  $('copyBtn').onclick = () => navigator.clipboard.writeText(url).then(()=>Lab.toast('Share link copied'), ()=>prompt('Copy:', url));
+  window.__p2p = {quiz, url, quotes:a.quotes.length, chapters:a.chapters.length};
+  $('out').scrollIntoView({behavior:'smooth'});
+};
+</script></body></html>

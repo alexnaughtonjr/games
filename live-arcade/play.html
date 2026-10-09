@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Live Arcade · Controller</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.scr{position:fixed;inset:0;display:flex;flex-direction:column;padding:16px;gap:12px}
+.st{display:flex;justify-content:space-between;font-family:var(--mono)}.st b{font-size:24px;display:block}.st span{font-size:11px;color:var(--muted);text-transform:uppercase}
+.pad{flex:1;display:flex;align-items:center;justify-content:space-around;gap:16px}
+.joy{width:min(56vw,240px);aspect-ratio:1;border-radius:50%;border:2px solid var(--border);background:radial-gradient(circle,#161b22,#0d1117);position:relative;touch-action:none}
+.knob{position:absolute;width:38%;height:38%;left:31%;top:31%;border-radius:50%;background:radial-gradient(circle at 35% 35%,#79c0ff,#1f6feb);box-shadow:0 0 24px #1f6feb}
+.dash{width:min(30vw,120px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 35%,#56d364,#238636);border:none;color:#fff;font-family:var(--mono);font-weight:800;font-size:18px;box-shadow:0 0 24px #238636}
+.dash:active{transform:scale(.94)}
+.emos{display:flex;justify-content:space-around}.emos button{font-size:28px;background:var(--panel);border:1px solid var(--border);border-radius:12px;width:56px;height:56px}
+.crown{font-family:var(--mono);text-align:center;font-size:14px;padding:8px;border-radius:8px;border:1px solid var(--border)}
+.crown.on{background:rgba(210,153,34,.18);border-color:#d29922;color:#e3b341}
+#join{justify-content:center;max-width:420px;margin:0 auto}
+</style></head><body>
+<div class="scr" id="join">
+  <span class="pill green">Live Arcade · Crown Rush</span>
+  <h1 style="font-size:30px">Join the game on stream</h1>
+  <p class="muted">You become a glowing ball in the arena. Get into the gold crown zone to score. Dash into other players to knock them out of it.</p>
+  <label>Room code</label><input id="room" maxlength="6" style="text-transform:uppercase;font-family:var(--mono);font-size:20px">
+  <label>Your name</label><input id="name" maxlength="12" placeholder="name on screen">
+  <button class="btn primary big" id="go" style="margin-top:12px;justify-content:center">Join →</button>
+  <p class="small muted">No account. Your phone becomes the controller, and nothing is stored.</p>
+</div>
+<div class="scr" id="game" style="display:none">
+  <div class="st"><div><span>score</span><b id="sc">0</b></div><div><span>rank</span><b id="rk">-</b></div><div><span>time</span><b id="tm">-</b></div><div><span>link</span><b id="nt" style="font-size:13px">…</b></div></div>
+  <div class="crown" id="cr">get to the 👑 zone</div>
+  <div class="pad"><div class="joy" id="joy"><div class="knob" id="knob"></div></div><button class="dash" id="dash">DASH</button></div>
+  <div class="emos" id="emos"><button>🔥</button><button>😂</button><button>👑</button><button>💥</button><button>❤️</button></div>
+  <p class="small muted" style="text-align:center">Keyboard: WASD/arrows + Space · emojis fill the hype meter ☄️</p>
+</div>
+<script src="../shared/vendor/peerjs.min.js"></script>
+<script src="net.js"></script>
+<script>
+(() => {
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+$('room').value = (q.get('room')||'').toUpperCase(); $('name').value = localStorage.getItem('la.name')||'';
+const id = 'p'+Math.random().toString(36).slice(2,9);
+let net = null, inp = {x:0,y:0}, dash = false;
+$('go').onclick = () => {
+  const room = $('room').value.trim().toUpperCase(), name = ($('name').value.trim()||'player').slice(0,12);
+  if (!room) return $('room').focus(); localStorage.setItem('la.name', name);
+  $('join').style.display='none'; $('game').style.display='flex';
+  net = LANet.client(room, id, onMsg, s => $('nt').textContent = s==='p2p'?'online':s==='local'?'local':s);
+  const hello = () => net.send({t:'join', id, name}); hello(); setTimeout(hello, 1500); setTimeout(hello, 4000); setTimeout(hello, 8000);
+  setInterval(() => { net.send({t:'in', id, x:inp.x, y:inp.y, dash}); dash=false; }, 50);
+};
+function onMsg(m){
+  if (m.t==='hello') { document.querySelector('.knob').style.background = '#'+m.col.toString(16).padStart(6,'0'); }
+  if (m.t==='state') { $('sc').textContent=m.score; $('rk').textContent=m.rank+'/'+m.of; $('tm').textContent=m.time; const c=$('cr'); c.classList.toggle('on', m.crown); c.textContent = m.crown ? '👑 scoring!' : 'get to the 👑 zone'; if (m.crown && navigator.vibrate) navigator.vibrate(15); }
+  if (m.t==='end') { $('cr').textContent = m.win ? '🏆 YOU WON THE ROUND!' : 'round over: next one starts soon'; navigator.vibrate && navigator.vibrate(m.win?[100,50,100]:60); }
+}
+// joystick
+const joy=$('joy'), knob=$('knob'); let act=null;
+function mv(e){ const r=joy.getBoundingClientRect(); const t=[...(e.touches||[e])].find(t=>act==null||t.identifier===act)||e; const dx=(t.clientX-r.left-r.width/2)/(r.width/2), dy=(t.clientY-r.top-r.height/2)/(r.height/2); const m=Math.min(1,Math.hypot(dx,dy)), a=Math.atan2(dy,dx); inp.x=Math.cos(a)*m; inp.y=Math.sin(a)*m; knob.style.transform=`translate(${inp.x*r.width*.32}px,${inp.y*r.height*.32}px)`; }
+function up(){ act=null; inp.x=inp.y=0; knob.style.transform=''; }
+joy.addEventListener('touchstart',e=>{act=e.changedTouches[0].identifier; mv(e); e.preventDefault();},{passive:false});
+joy.addEventListener('touchmove',e=>{mv(e); e.preventDefault();},{passive:false}); joy.addEventListener('touchend',up);
+joy.addEventListener('mousedown',e=>{ mv(e); const mm=ev=>mv(ev), mu=()=>{up(); removeEventListener('mousemove',mm); removeEventListener('mouseup',mu);}; addEventListener('mousemove',mm); addEventListener('mouseup',mu); });
+$('dash').addEventListener('touchstart',e=>{dash=true; navigator.vibrate&&navigator.vibrate(30); e.preventDefault();},{passive:false}); $('dash').onclick=()=>dash=true;
+const keys={}; addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1; if(e.key===' ')dash=true; kb();}); addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0; kb();});
+function kb(){ if(act!=null) return; inp.x=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0); inp.y=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0); }
+$('emos').onclick = e => { if (e.target.tagName==='BUTTON' && net) net.send({t:'emo', id, e:e.target.textContent}); };
+window.__ctl = { join:(room,name)=>{ $('room').value=room; $('name').value=name; $('go').click(); }, set:(x,y)=>{inp.x=x;inp.y=y;} };
+})();
+</script></body></html>

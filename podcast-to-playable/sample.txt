@@ -1,0 +1,14 @@
+[00:00] Alex: Welcome back to the late night build session. Tonight we're talking about shipping small games every single week.
+Jordan: I still can't believe you shipped a racing game in four days.
+Alex: Honestly the secret is that the first version is always ugly. Nobody sees version one except me and maybe three friends.
+[04:12] Jordan: So what's the biggest mistake new builders make?
+Alex: They wait for permission. They build for six months in the dark and then launch to nobody. Instead, post the ugly prototype on day one.
+Jordan: But doesn't that scare people away?
+Alex: Actually the opposite. People love watching something grow. When I posted the first broken build, forty people played it and twelve sent me ideas.
+[09:30] Jordan: Let's talk money. How does a free browser game make anything?
+Alex: Sponsors. Every game has billboards inside the world, and every slot that sells makes the next slot cost more. The first one is cheap on purpose.
+Jordan: That's clever, it creates a little bit of urgency.
+Alex: Right, and it's honest. I show the real numbers, even when the number is zero dollars.
+[15:45] Jordan: Last question. What would you tell someone starting tonight?
+Alex: Pick the smallest game you can finish in a weekend. Finish it. Ship it. Then do it again next week. Momentum beats talent every single time.
+Jordan: Momentum beats talent. That's the clip right there.
