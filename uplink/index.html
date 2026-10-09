@@ -18,11 +18,13 @@
       <span>height <b id="height">0m</b></span>
       <span>cores <b id="cores">0</b></span>
       <span>score <b id="score">0</b></span>
+      <span>beacon <b id="beacon">no beacon</b></span>
+      <span>slips <b id="slips">0</b></span>
     </div>
     <a class="back" href="../index.html">All games</a>
   </header>
 
-  <p id="hint" hidden><kbd>A</kbd><kbd>D</kbd> move · <kbd>Space</kbd> jump · <kbd>R</kbd> new shaft · a missed ledge ends the run</p>
+  <p id="hint" hidden><kbd>A</kbd><kbd>D</kbd> move · <kbd>Space</kbd> jump · <kbd>R</kbd> new shaft · blue beacons save you · red beams knock you off</p>
 
   <section id="title" class="overlay">
     <div class="card">
@@ -33,7 +35,8 @@
       <ul class="howto">
         <li><kbd>A</kbd><kbd>D</kbd> or the arrow keys move. <kbd>Space</kbd>, <kbd>W</kbd>, or <kbd>Up</kbd> jumps. Hold for the full arc.</li>
         <li>Each meter is 10 points. Each blue core is 100. Green chevrons launch you. Red lips crumble. Blue slabs slide.</li>
-        <li>Miss a ledge and the lamp drops. <kbd>R</kbd> starts another shaft. Stand on the relay pad to light it.</li>
+        <li>Land on a blue beacon and a later fall puts you back there. Red sweep beams count as a fall too.</li>
+        <li>With no beacon yet, a miss ends the run. <kbd>R</kbd> starts another shaft. The dish at the top is the relay.</li>
       </ul>
       <button id="start" type="button">Start the climb</button>
       <p class="credit"><a class="back" href="../index.html">All games</a></p>

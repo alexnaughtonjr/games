@@ -35,7 +35,10 @@
     time: 0,
     maxY: PLAT_H,
     cores: 0,
-    shake: 0
+    shake: 0,
+    checkpoint: null,
+    slips: 0,
+    floorY: PLAT_H
   };
 
   const player = {
@@ -50,11 +53,13 @@
     buffer: 0,
     mesh: null,
     shadow: null,
-    ride: null
+    ride: null,
+    invuln: 0
   };
 
   const platforms = [];
   const cores = [];
+  const lasers = [];
   const coreWorld = new THREE.Vector3();
   let goalBulb = null;
   let dustGeo = null;
@@ -160,7 +165,11 @@
     if (state.mode === "run") return;
     state.mode = "run";
     state.maxY = platforms[0].y + platforms[0].h;
+    state.floorY = state.maxY;
     state.cores = 0;
+    state.checkpoint = null;
+    state.slips = 0;
+    player.invuln = 0;
     placeCourier(platforms[0]);
     $("title").classList.add("hidden");
     $("end").classList.add("hidden");
@@ -191,6 +200,36 @@
     $("end").classList.remove("hidden");
   }
 
+  function failOrRespawn() {
+    if (state.checkpoint) {
+      state.slips += 1;
+      placeCourier(state.checkpoint);
+      state.floorY = player.y;
+      player.invuln = 1.1;
+      state.shake = 0.18;
+      player.mesh.position.set(player.x, player.y, player.z);
+      return;
+    }
+    finish(false);
+  }
+
+  function hitLaser() {
+    const body = player.y + 0.45;
+    for (let i = 0; i < lasers.length; i++) {
+      const laser = lasers[i];
+      if (Math.abs(body - laser.y) > 0.32) continue;
+      if (Math.abs(player.x - laser.beam.position.x) < 0.78) return true;
+    }
+    return false;
+  }
+
+  function updateLasers() {
+    for (let i = 0; i < lasers.length; i++) {
+      const laser = lasers[i];
+      laser.beam.position.x = Math.sin(state.time * laser.speed + laser.phase) * 2.35;
+    }
+  }
+
   function currentScore() {
     return Math.round(Math.max(0, state.maxY) * 10 + state.cores * 100);
   }
@@ -209,6 +248,7 @@
     spinCores(dt);
     updatePlatforms(dt);
     updateAtmosphere(dt);
+    updateLasers();
     if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
     if (state.mode === "run") stepPlayer(dt);
     else if (state.mode === "title") idleCourier();
@@ -304,6 +344,7 @@
       } else {
         player.ride = landed;
         if (landed.kind === "crumble" && landed.crumbleT == null) landed.crumbleT = 0.52;
+        if (landed.kind === "beacon") state.checkpoint = { x: landed.x, y: landed.y };
       }
     }
 
@@ -313,8 +354,16 @@
       finish(true);
       return;
     }
-    if (player.y < -1.4 || (state.maxY > 2 && player.y < state.maxY - 8)) {
-      finish(false);
+    if (player.invuln > 0) {
+      player.invuln -= dt;
+      player.mesh.visible = Math.sin(state.time * 28) > 0;
+    } else player.mesh.visible = true;
+
+    if (player.grounded) state.floorY = player.y;
+    const laserHit = player.invuln <= 0 && hitLaser();
+    if (laserHit || player.y < -1.4 || player.y < state.floorY - 7.5) {
+      if (laserHit) burst(player.x, player.y + 0.4, player.z, 14);
+      failOrRespawn();
       return;
     }
     player.mesh.rotation.z = THREE.MathUtils.damp(player.mesh.rotation.z, -player.vx * 0.045, 8, dt);
@@ -356,6 +405,8 @@
     $("height").textContent = Math.max(0, player.y).toFixed(1) + "m";
     $("cores").textContent = String(state.cores);
     $("score").textContent = String(currentScore());
+    $("beacon").textContent = state.checkpoint ? "beacon set" : "no beacon";
+    $("slips").textContent = String(state.slips);
   }
 
   function collectCores() {
@@ -419,6 +470,8 @@
     player.grounded = true;
     player.coyote = 0.12;
     player.ride = null;
+    player.invuln = 0;
+    player.mesh.visible = true;
     player.mesh.position.set(player.x, player.y, player.z);
     player.shadow.position.set(player.x, player.y + 0.03, player.z);
   }
@@ -541,8 +594,10 @@
 
   function clearCourse() {
     for (let i = 0; i < platforms.length; i++) disposeObject(platforms[i].mesh);
+    for (let i = 0; i < lasers.length; i++) disposeObject(lasers[i].group);
     platforms.length = 0;
     cores.length = 0;
+    lasers.length = 0;
     goalBulb = null;
   }
 
@@ -593,9 +648,20 @@
     const rand = mulberry32(seed);
     const layout = STAIR.map((s) => ({ x: s.x, y: s.y, w: s.w, kind: "solid" }));
     let prev = layout[layout.length - 1];
+    let nextBeacon = 20;
+    const laserGaps = [];
     while (prev.y < 62) {
       const next = prev.kind === "boost" ? placeAfterBoost(prev, rand) : placeNext(prev, rand);
-      tagSpecial(next, prev, rand);
+      if (prev.kind !== "boost" && next.y >= nextBeacon && next.y < 56) {
+        next.kind = "beacon";
+        next.w = Math.max(next.w, 2.8);
+        const limit = SHAFT_HALF - next.w / 2 - 0.08;
+        next.x = Math.max(-limit, Math.min(limit, Math.max(-1.1, Math.min(1.1, next.x))));
+        nextBeacon += 22;
+      } else tagSpecial(next, prev, rand);
+      if (next.y > 30 && next.kind !== "beacon" && prev.kind !== "beacon" && rand() < 0.28) {
+        laserGaps.push(prev.y + PLAT_H + (next.y - prev.y) * 0.5);
+      }
       layout.push(next);
       prev = next;
     }
@@ -635,8 +701,26 @@
         phase: layout[i].phase
       });
       const kind = layout[i].kind;
-      if ((kind === "solid" || kind === "boost") && i > 1 && i % 3 === 0) addCore(rec, i);
+      if ((kind === "solid" || kind === "boost" || kind === "beacon") && i > 1 && i % 3 === 0) addCore(rec, i);
     }
+    for (let i = 0; i < laserGaps.length; i++) addLaser(laserGaps[i], rand() * Math.PI * 2, 1.15 + rand() * 0.55);
+  }
+
+  function addLaser(y, phase, speed) {
+    const group = new THREE.Group();
+    group.position.set(0, y, 0.08);
+    const track = new THREE.Mesh(
+      new THREE.BoxGeometry(5.1, 0.02, 0.02),
+      new THREE.MeshBasicMaterial({ color: 0xf85149, transparent: true, opacity: 0.4, depthWrite: false })
+    );
+    group.add(track);
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(1.45, 0.07, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0xf85149, emissive: 0xf85149, emissiveIntensity: 2.4, roughness: 0.2 })
+    );
+    group.add(beam);
+    scene.add(group);
+    lasers.push({ group, beam, y, phase, speed });
   }
 
   function addCore(platform, phase) {
@@ -673,18 +757,33 @@
     const lipColor = spec.kind === "goal" || spec.kind === "boost" ? 0x238636
       : spec.kind === "crumble" ? 0xf85149
       : 0x58a6ff;
+    const lipGlow = spec.kind === "beacon" ? 2.3 : spec.kind === "goal" ? 2 : 1.55;
     const lip = new THREE.Mesh(
       new THREE.BoxGeometry(spec.w + 0.05, 0.045, 0.07),
       new THREE.MeshStandardMaterial({
         color: lipColor,
         emissive: lipColor,
-        emissiveIntensity: spec.kind === "goal" ? 2 : 1.55,
+        emissiveIntensity: lipGlow,
         roughness: 0.28,
         metalness: 0.15
       })
     );
     lip.position.set(0, spec.h - 0.02, spec.d / 2 - 0.02);
     group.add(lip);
+
+    if (spec.kind === "beacon") {
+      const postMat = new THREE.MeshStandardMaterial({
+        color: 0x58a6ff,
+        emissive: 0x58a6ff,
+        emissiveIntensity: 1.5,
+        roughness: 0.28
+      });
+      for (let side = -1; side <= 1; side += 2) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 8), postMat);
+        post.position.set(side * (spec.w * 0.36), spec.h + 0.45, 0);
+        group.add(post);
+      }
+    }
 
     if (spec.kind === "boost") {
       const chevron = new THREE.Mesh(
@@ -696,17 +795,42 @@
     }
 
     if (spec.kind === "goal") {
-      const mast = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.055, 0.09, 1.35, 10),
-        new THREE.MeshStandardMaterial({ color: 0x161b22, metalness: 0.7, roughness: 0.32, emissive: 0x238636, emissiveIntensity: 0.35 })
-      );
-      mast.position.y = spec.h + 0.68;
+      const metal = new THREE.MeshStandardMaterial({
+        color: 0x21262d,
+        metalness: 0.8,
+        roughness: 0.26,
+        emissive: 0x238636,
+        emissiveIntensity: 0.2
+      });
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.1, 1.7, 12), metal);
+      mast.position.y = spec.h + 0.85;
       group.add(mast);
-      goalBulb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16, 16, 16),
-        new THREE.MeshStandardMaterial({ color: 0x3fb950, emissive: 0x238636, emissiveIntensity: 2.2, roughness: 0.2 })
+      const bowl = new THREE.Mesh(
+        new THREE.SphereGeometry(0.78, 28, 16, 0, Math.PI * 2, 0, Math.PI * 0.42),
+        new THREE.MeshStandardMaterial({
+          color: 0x161b22,
+          metalness: 0.84,
+          roughness: 0.2,
+          side: THREE.DoubleSide,
+          emissive: 0x0d1117,
+          emissiveIntensity: 0.25
+        })
       );
-      goalBulb.position.y = spec.h + 1.46;
+      bowl.position.y = spec.h + 1.62;
+      bowl.rotation.x = Math.PI;
+      group.add(bowl);
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.66, 0.028, 8, 32),
+        new THREE.MeshStandardMaterial({ color: 0x238636, emissive: 0x238636, emissiveIntensity: 1.9, roughness: 0.3 })
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = spec.h + 1.7;
+      group.add(rim);
+      goalBulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x3fb950, emissive: 0x238636, emissiveIntensity: 2.8, roughness: 0.18 })
+      );
+      goalBulb.position.y = spec.h + 1.42;
       group.add(goalBulb);
     }
 

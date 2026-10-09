@@ -17,3 +17,5 @@ Open `index.html` in a browser. WebGL is required. Three.js is the copy vendored
 - The green pad at the top lights the relay and wins the run
 - Green chevrons are boost pads. Red lips crumble after you land. Blue slabs slide under you
 - The courier carries a lamp. Dust drifts in the shaft, and jumps throw a ring of sparks
+- Blue beacon platforms save a checkpoint. Red sweep beams and a long fall return you there
+- The top of the shaft is a relay dish. Landing on that pad wins
