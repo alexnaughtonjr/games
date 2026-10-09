@@ -74,7 +74,8 @@ Free custom game for Alexander Haislip. Climb a dark 3D relay shaft as a courier
 
 WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.min.js`, so play does not call a CDN and there is no build step.
 
-- `A` `D` or the arrow keys move. `Space`, `W`, or `Up` jumps.
+- `A` `D` or the arrow keys move. `Space`, `W`, or `Up` jumps. Touch screens use the buttons along the bottom.
+- `P` or `Esc` pauses. Blue beacons save a checkpoint. The best score stays in this browser (`games.uplink.best`).
 - Open `uplink/index.html` directly, or visit it from the collection.
 
 ## Theme

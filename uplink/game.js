@@ -26,9 +26,11 @@
     { x: 0.85, y: 10.1, w: 2.7 }
   ];
 
+  const HIGH_KEY = "games.uplink.best";
   const keys = new Set();
   let jumpEdge = false;
   let jumpRelease = false;
+  let best = readBest();
 
   const state = {
     mode: "title",
@@ -127,6 +129,22 @@
     $("retry").blur();
     restart();
   });
+  $("pauseBtn").addEventListener("click", () => {
+    $("pauseBtn").blur();
+    togglePause();
+  });
+  $("resume").addEventListener("click", () => {
+    $("resume").blur();
+    if (state.mode === "pause") togglePause();
+  });
+  $("restart").addEventListener("click", () => {
+    $("restart").blur();
+    restart();
+  });
+  bindHold("btnLeft", "KeyA");
+  bindHold("btnRight", "KeyD");
+  bindHold("btnJump", "Space");
+  paintBest();
 
   window.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -138,11 +156,16 @@
       startRun();
       return;
     }
+    if ((e.code === "KeyP" || e.code === "Escape") && (state.mode === "run" || state.mode === "pause")) {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
     if ((state.mode === "over" || state.mode === "win") && (e.code === "Enter" || e.code === "Space" || e.code === "KeyR")) {
       restart();
       return;
     }
-    if (state.mode === "run" && e.code === "KeyR") {
+    if ((state.mode === "run" || state.mode === "pause") && e.code === "KeyR") {
       restart();
       return;
     }
@@ -173,9 +196,78 @@
     placeCourier(platforms[0]);
     $("title").classList.add("hidden");
     $("end").classList.add("hidden");
+    $("pause").classList.add("hidden");
+    $("pauseBtn").textContent = "Pause";
+    $("pauseBtn").setAttribute("aria-pressed", "false");
     $("hud").hidden = false;
     $("hint").hidden = false;
     updateHud();
+  }
+
+  function togglePause() {
+    if (state.mode === "run") {
+      state.mode = "pause";
+      $("pause").classList.remove("hidden");
+      $("pauseBtn").textContent = "Resume";
+      $("pauseBtn").setAttribute("aria-pressed", "true");
+      return;
+    }
+    if (state.mode === "pause") {
+      state.mode = "run";
+      $("pause").classList.add("hidden");
+      $("pauseBtn").textContent = "Pause";
+      $("pauseBtn").setAttribute("aria-pressed", "false");
+    }
+  }
+
+  function bindHold(id, code) {
+    const el = $(id);
+    const press = (e) => {
+      e.preventDefault();
+      if (e.pointerId != null && el.setPointerCapture) {
+        try { el.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
+      }
+      if (!keys.has(code)) {
+        keys.add(code);
+        if (code === "Space" && state.mode === "run") jumpEdge = true;
+      }
+    };
+    const release = (e) => {
+      e.preventDefault();
+      if (keys.has(code) && code === "Space") jumpRelease = true;
+      keys.delete(code);
+    };
+    el.addEventListener("pointerdown", press);
+    el.addEventListener("pointerup", release);
+    el.addEventListener("pointercancel", release);
+  }
+
+  function readBest() {
+    try {
+      const n = Number(localStorage.getItem(HIGH_KEY));
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  function writeBest(n) {
+    try { localStorage.setItem(HIGH_KEY, String(n)); } catch (err) { /* private mode */ }
+  }
+
+  function noteBest() {
+    if (state.mode !== "run" && state.mode !== "over" && state.mode !== "win") return;
+    const score = currentScore();
+    if (score <= best) return;
+    best = score;
+    writeBest(best);
+    paintBest();
+  }
+
+  function paintBest() {
+    const line = best > 0 ? "Best score " + best + " is saved in this browser." : "Best score saves in this browser.";
+    $("titleBest").textContent = line;
+    $("best").textContent = String(best);
   }
 
   function restart() {
@@ -194,9 +286,11 @@
     const meters = Math.max(0, state.maxY).toFixed(1);
     const score = currentScore();
     const coreWord = state.cores === 1 ? "core" : "cores";
+    noteBest();
+    const bestBit = " Best " + best + ".";
     $("endText").textContent = won
-      ? "The relay pad is lit. " + meters + "m up, " + state.cores + " " + coreWord + ", score " + score + "."
-      : "The shaft took the lamp at " + meters + "m. Score " + score + ". " + state.cores + " " + coreWord + " banked.";
+      ? "The relay pad is lit. " + meters + "m up, " + state.cores + " " + coreWord + ", score " + score + "." + bestBit
+      : "The shaft took the lamp at " + meters + "m. Score " + score + ". " + state.cores + " " + coreWord + " banked." + bestBit;
     $("end").classList.remove("hidden");
   }
 
@@ -231,7 +325,8 @@
   }
 
   function currentScore() {
-    return Math.round(Math.max(0, state.maxY) * 10 + state.cores * 100);
+    const climbed = Math.max(0, state.maxY - PLAT_H);
+    return Math.round(climbed * 10 + state.cores * 100);
   }
 
   function resize() {
@@ -245,11 +340,13 @@
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.033);
     state.time += dt;
-    spinCores(dt);
-    updatePlatforms(dt);
-    updateAtmosphere(dt);
-    updateLasers();
-    if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
+    if (state.mode !== "pause") {
+      spinCores(dt);
+      updatePlatforms(dt);
+      updateAtmosphere(dt);
+      updateLasers();
+      if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
+    }
     if (state.mode === "run") stepPlayer(dt);
     else if (state.mode === "title") idleCourier();
     updateCamera(dt);
@@ -405,6 +502,7 @@
     $("height").textContent = Math.max(0, player.y).toFixed(1) + "m";
     $("cores").textContent = String(state.cores);
     $("score").textContent = String(currentScore());
+    noteBest();
     $("beacon").textContent = state.checkpoint ? "beacon set" : "no beacon";
     $("slips").textContent = String(state.slips);
   }

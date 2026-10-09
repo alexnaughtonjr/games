@@ -18,9 +18,11 @@
       <span>height <b id="height">0m</b></span>
       <span>cores <b id="cores">0</b></span>
       <span>score <b id="score">0</b></span>
+      <span>best <b id="best">0</b></span>
       <span>beacon <b id="beacon">no beacon</b></span>
       <span>slips <b id="slips">0</b></span>
     </div>
+    <button id="pauseBtn" class="ghost" type="button" aria-pressed="false">Pause</button>
     <a class="back" href="../index.html">All games</a>
   </header>
 
@@ -37,12 +39,33 @@
         <li>Each meter is 10 points. Each blue core is 100. Green chevrons launch you. Red lips crumble. Blue slabs slide.</li>
         <li>Land on a blue beacon and a later fall puts you back there. Red sweep beams count as a fall too.</li>
         <li>With no beacon yet, a miss ends the run. <kbd>R</kbd> starts another shaft. The dish at the top is the relay.</li>
+        <li><kbd>P</kbd> or <kbd>Esc</kbd> pauses. On a touch screen, use the buttons along the bottom.</li>
       </ul>
       <button id="start" type="button">Start the climb</button>
+      <p id="titleBest" class="credit">Best score saves in this browser.</p>
       <p class="credit"><a class="back" href="../index.html">All games</a></p>
       <p class="credit">Free custom game for Alexander Haislip</p>
     </div>
   </section>
+
+  <section id="pause" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow">paused</p>
+      <h1>Lamp on hold</h1>
+      <p class="lead">The shaft is frozen. Resume the climb, or start a new one.</p>
+      <div class="pause-actions">
+        <button id="resume" type="button">Resume</button>
+        <button id="restart" class="ghost" type="button">Restart run</button>
+        <a class="back" href="../index.html">All games</a>
+      </div>
+    </div>
+  </section>
+
+  <div id="touch" aria-hidden="true">
+    <button id="btnLeft" type="button">Left</button>
+    <button id="btnJump" class="jump" type="button">Jump</button>
+    <button id="btnRight" type="button">Right</button>
+  </div>
 
   <section id="end" class="overlay hidden">
     <div class="card">

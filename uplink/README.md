@@ -10,12 +10,13 @@ Open `index.html` in a browser. WebGL is required. Three.js is the copy vendored
 
 ## Controls
 
-- `A` `D` or the arrow keys move
-- `Space`, `W`, or `Up` jumps. Release early for a shorter hop
-- Blue cores are worth 100. Height adds 10 points per meter
-- Falling off a ledge ends the run. `R` or Climb again builds a new shaft
-- The green pad at the top lights the relay and wins the run
+- `A` `D` or the arrow keys move. On a touch screen, Left and Right sit along the bottom
+- `Space`, `W`, `Up`, or Jump. Release early for a shorter hop
+- Blue cores are worth 100. Height above the floor adds 10 points per meter
+- `P` or `Esc` pauses the shaft. `R` or Restart builds a new one
 - Green chevrons are boost pads. Red lips crumble after you land. Blue slabs slide under you
 - The courier carries a lamp. Dust drifts in the shaft, and jumps throw a ring of sparks
 - Blue beacon platforms save a checkpoint. Red sweep beams and a long fall return you there
+- Before the first beacon, a miss ends the run
 - The top of the shaft is a relay dish. Landing on that pad wins
+- The best score is saved in this browser under `games.uplink.best`
