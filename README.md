@@ -22,7 +22,8 @@ Then open `index.html`, or one of the game pages below.
 Steer a snake around a 20×20 board and eat the blue pellets. Each pellet is worth 10 points and the snake speeds up as the score climbs. Hitting a wall or your own tail ends the run. Filling the board wins it.
 
 - Arrow keys or WASD choose the direction and start the run. The snake stays still until that first direction. On a touch screen, swipe the board or use the on-screen pad.
-- Start clears the ready message so the board is visible. Space or P pauses. R or Restart returns to the ready screen.
+- A second direction pressed before the next step is kept, so a fast corner still happens. A turn that would reverse into the tail is ignored.
+- Start clears the ready message so the board is visible. Space or P pauses. R or Restart returns to the ready screen. Play again, after a wall, a tail, or a full board, deals a fresh snake and waits for the next direction.
 - The best score is saved in this browser under `localStorage` (`games.snake.highScore`).
 
 ## Memory Match
