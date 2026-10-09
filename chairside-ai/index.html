@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chairside Explainer - private prototype</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+.app{display:grid;grid-template-columns:240px 1fr;gap:16px}@media(max-width:800px){.app{grid-template-columns:1fr}}
+.procs button{display:flex;width:100%;gap:10px;align-items:center;margin-bottom:6px;text-align:left}
+.procs button.on{border-color:var(--blue);background:#1f6feb22}
+#view{position:relative;height:460px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:radial-gradient(circle at 50% 40%,#16233a,#0d1117)}
+#view canvas{width:100%;height:100%;display:block}
+.cap{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(13,17,23,.85);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:17px;line-height:1.45}
+.dots{display:flex;gap:6px;margin:10px 0}.dots span{flex:1;height:5px;border-radius:3px;background:var(--border)}.dots span.on{background:var(--green)}
+.opts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#print{display:none}
+@media print{body *{visibility:hidden}#print,#print *{visibility:visible}#print{display:block;position:absolute;inset:0;color:#000;background:#fff;padding:30px;font-family:Inter,sans-serif}#print h1{font-size:26px}#print li{margin:6px 0}}
+</style></head><body><div class="wrap">
+<section class="hero" style="padding-bottom:10px">
+  <h1 style="font-size:34px">Explain a procedure in 60 seconds, chairside.</h1>
+  <p class="lead">Pick a procedure and press play. An animated 3D tooth goes through it step by step while the captions are read aloud. Switch to <b>kid mode</b> or <b>Español</b>, then print a take-home care card.</p>
+</section>
+<div class="app">
+  <div><div class="procs" id="procs"></div>
+    <div class="card small"><b>Settings</b><div class="opts" style="margin-top:8px">
+      <button class="btn" id="lang">🌐 English</button><button class="btn" id="lvl">🧒 Kid mode: off</button><button class="btn" id="voice">🔊 Voice: on</button></div>
+      <p class="muted" style="margin-top:8px">Office name for the printout:</p><input id="office" placeholder="Demo Dental Office" style="width:100%">
+    </div></div>
+  <div><div id="view"><canvas id="c"></canvas><div class="cap" id="cap">Choose a procedure on the left.</div></div>
+    <div class="dots" id="dots"></div>
+    <div class="cta-row" style="margin-top:4px"><button class="btn" id="prev">◀ back</button><button class="btn primary" id="play">▶ Play</button><button class="btn" id="next">next ▶</button><button class="btn" id="printb">🖨 Take-home card</button></div>
+    <div class="card small muted" style="margin-top:12px">⚠️ Written by hand as educational templates. <b>Not medical advice</b>, and no patient data is entered, stored, or sent. This is a prototype for exploring the idea.</div>
+  </div>
+</div>
+<h2>Idea board</h2><div class="card" id="board"></div>
+<h2>Prototype dashboard</h2><div id="stats"></div>
+</div>
+<div id="print"></div>
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/lab.js"></script>
+<script src="procedures.js"></script>
+<script>
+Lab.chrome({id:'chairside', name:'Chairside Explainer', icon:'🦷', proto:true});
+Lab.board(document.getElementById('board'), {product:'Chairside Explainer (prototype)', seed:['More languages','Bridge + veneers + extraction','QR code on printout to rewatch','Office logo upload']});
+Lab.stats(document.getElementById('stats'), {product:'chairside', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Explainers played','plays'],['Cards printed','prints']], log:[['Oct 9','Prototype: 6 procedures, 3D tooth animations, TTS, EN/ES, kid mode, print card.']]});
+const $=id=>document.getElementById(id);
+let lang='en', kid=0, voice=true, cur='filling', step=0, playing=false, timer;
+// ---- 3D tooth ----
+const cv=$('c'), R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); R.setPixelRatio(Math.min(devicePixelRatio,2));
+const S=new THREE.Scene(), C=new THREE.PerspectiveCamera(40,1,.1,100); C.position.set(0,2.6,8.5); C.lookAt(0,-.2,0);
+function rs(){ const r=cv.parentElement.getBoundingClientRect(); R.setSize(r.width,r.height,false); C.aspect=r.width/r.height; C.updateProjectionMatrix(); } addEventListener('resize',rs);
+S.add(new THREE.HemisphereLight(0xffffff,0x223355,1.4)); const dl=new THREE.DirectionalLight(0xffffff,2); dl.position.set(3,5,6); S.add(dl);
+const pts=[[0,-3.2],[.25,-3.1],[.45,-2.2],[.65,-1.2],[.95,-.3],[1.25,.3],[1.35,1.0],[1.3,1.6],[1.0,1.95],[.5,1.85],[0,2.0]].map(p=>new THREE.Vector2(p[0],p[1]));
+const toothMat=new THREE.MeshPhysicalMaterial({color:0xf6f1e6,roughness:.25,clearcoat:.6,transparent:true,opacity:1});
+const tooth=new THREE.Mesh(new THREE.LatheGeometry(pts,48),toothMat); const G=new THREE.Group(); G.add(tooth); S.add(G);
+const gum=new THREE.Mesh(new THREE.BoxGeometry(5,2.2,3,1,1,1),new THREE.MeshStandardMaterial({color:0xe07a8f,roughness:.6,transparent:true,opacity:.85})); gum.position.y=-1.6; S.add(gum);
+const pulp=new THREE.Mesh(new THREE.CapsuleGeometry(.28,3.2,6,12),new THREE.MeshStandardMaterial({color:0xff6b81,emissive:0x330000})); pulp.position.y=-.5; G.add(pulp); pulp.visible=false;
+const spot=new THREE.Mesh(new THREE.SphereGeometry(.4,16,12),new THREE.MeshStandardMaterial({color:0x3b2a1a})); spot.position.set(.3,1.85,.5); spot.scale.set(1,.4,1); G.add(spot);
+const fillM=new THREE.Mesh(new THREE.SphereGeometry(.42,16,12),new THREE.MeshPhysicalMaterial({color:0xfff8ee,emissive:0x000000,clearcoat:1})); fillM.position.copy(spot.position); fillM.scale.set(1,.45,1); G.add(fillM);
+const crownM=new THREE.Mesh(new THREE.LatheGeometry(pts.slice(5).map(p=>new THREE.Vector2(p.x*1.08,p.y+.05)),48),new THREE.MeshPhysicalMaterial({color:0xfffdf6,roughness:.1,clearcoat:1,side:THREE.DoubleSide})); G.add(crownM);
+const post=new THREE.Mesh(new THREE.CylinderGeometry(.35,.22,2.6,24,8),new THREE.MeshStandardMaterial({color:0x9aa4b2,metalness:.9,roughness:.25})); post.position.y=-1.8; S.add(post);
+const abut=new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,.7,16),new THREE.MeshStandardMaterial({color:0xc0c8d4,metalness:.9,roughness:.2})); abut.position.y=-.2; S.add(abut);
+const tool=new THREE.Mesh(new THREE.CylinderGeometry(.06,.12,3,10),new THREE.MeshStandardMaterial({color:0xb8c4d0,metalness:.8,roughness:.2})); S.add(tool);
+const light=new THREE.PointLight(0x58a6ff,0,6); S.add(light);
+const sparks=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(300).fill(0).map(()=> (Math.random()-.5)*5),3)),new THREE.PointsMaterial({color:0x7ee787,size:.08,transparent:true,opacity:0})); S.add(sparks);
+const tartar=new THREE.Mesh(new THREE.TorusGeometry(1.2,.13,8,40),new THREE.MeshStandardMaterial({color:0xcdb36a,roughness:1})); tartar.rotation.x=Math.PI/2; tartar.position.y=.2; G.add(tartar);
+const crack=new THREE.Mesh(new THREE.BoxGeometry(.05,1.4,.05),new THREE.MeshBasicMaterial({color:0x5b4636})); crack.position.set(.2,1.2,1.25); crack.rotation.z=.3; G.add(crack);
+let anim='idle', at=0;
+function reset(){ [pulp,spot,fillM,crownM,post,abut,tool,tartar,crack].forEach(m=>m.visible=false); tooth.visible=true; toothMat.opacity=1; tooth.scale.set(1,1,1); light.intensity=0; sparks.material.opacity=0; pulp.material.color.set(0xff6b81); gum.material.color.set(0xe07a8f); }
+function setAnim(a){ anim=a; at=0; reset(); const pr=cur;
+  if(['decay','numb','drill','fill','done'].includes(a) && pr!=='cleaning' && pr!=='sealant'){ spot.visible= a==='decay'||a==='numb'||a==='drill'; fillM.visible= a==='fill'||a==='done'; }
+  if(pr==='crown'){ crack.visible = a==='crack'||a==='numb'; }
+  if(pr==='rootcanal'){ toothMat.opacity=.35; pulp.visible=true; spot.visible=false; fillM.visible=false; }
+  if(pr==='implant'){ tooth.visible=false; post.visible= a!=='missing'; abut.visible= a==='abut'||a==='crown'; }
+  if(pr==='cleaning'){ tartar.visible = a==='tartar'||a==='scale'; }
+  if(pr==='sealant'){ spot.visible=false; fillM.visible= a==='fill'||a==='done'; if(fillM.visible) fillM.material.color.set(0xcfe8ff); }
+  else fillM.material.color.set(0xfff8ee);
+  if(a==='crown'||a==='shape'||a==='scan') crownM.visible = a==='crown';
+}
+const clk=new THREE.Clock();
+(function loop(){ requestAnimationFrame(loop); const dt=clk.getDelta(); at+=dt; const t=performance.now()/1000;
+  G.rotation.y = Math.sin(t*.4)*.5; tool.visible=false;
+  if(anim==='infect'){ pulp.material.emissive.setRGB(.3+.3*Math.sin(t*5),0,0); pulp.material.color.set(0xd03030); gum.material.color.set(0xff5577); }
+  if(anim==='numb'){ gum.material.color.setHSL(.6+.05*Math.sin(t*3),.4,.6); sparks.material.opacity=.6; sparks.material.color.set(0x79c0ff); sparks.rotation.y+=dt; }
+  if(anim==='drill'||anim==='scale'){ tool.visible=true; tool.position.set(1.4+Math.sin(t*30)*.03,2.6,.6); tool.rotation.z=.6; if(spot.visible) spot.scale.setScalar(Math.max(.01,1-at*.4)); if(tartar.visible) tartar.scale.setScalar(Math.max(.01,1-at*.25)); if(pulp.visible) pulp.scale.y=Math.max(.05,1-at*.3); }
+  if(anim==='fill'){ fillM.scale.set(1,Math.min(.45,at*.2),1); light.intensity=at>1.5?8:0; light.position.set(0,3,1); }
+  if(anim==='canals'){ pulp.material.color.set(0xd0a060); pulp.material.emissive.setHex(0); }
+  if(anim==='shape'){ tooth.scale.set(Math.max(.82,1-at*.06),1,Math.max(.82,1-at*.06)); toothMat.color.set(0xf0e6d4); }
+  if(anim==='scan'){ tooth.scale.set(.82,1,.82); light.intensity=4+3*Math.sin(t*6); light.color.set(0x58a6ff); light.position.set(Math.sin(t*2)*2,2.5,2); }
+  if(anim==='crown'){ crownM.visible=true; crownM.position.y=Math.max(0,3-at*1.5); tooth.scale.set(.82,1,.82); if(cur==='implant'){ crownM.position.y=Math.max(-.6,2-at*1.5);} }
+  if(anim==='post'){ post.position.y=Math.max(-1.8,1-at*1.4); post.rotation.y+=dt*6; }
+  if(anim==='heal'){ post.position.y=-1.8; gum.material.color.setHSL(.97,.55,.55+.08*Math.sin(t*2)); }
+  if(anim==='polish'||anim==='done'){ sparks.material.opacity=.9; sparks.material.color.set(0x7ee787); sparks.rotation.y+=dt*.8; toothMat.color.set(0xffffff); }
+  if(anim==='grooves'){ spot.visible=true; spot.material.color.set(0x6b5a3a); }
+  if(cur==='implant'&&anim==='crown'){ post.position.y=-1.8; }
+  R.render(S,C); })();
+// ---- UI ----
+function txt(s){ return s[lang][kid]; }
+function renderProcs(){ $('procs').innerHTML=''; for(const [k,p] of Object.entries(PROCS)){ const b=Lab.h('button',{class:'btn'+(k===cur?' on':'')},`${p.icon} ${p.name[lang]}`); b.onclick=()=>{cur=k;step=0;stop();show();renderProcs();}; $('procs').append(b);} }
+function show(){ const p=PROCS[cur], s=p.steps[step]; $('cap').innerHTML=`<span class="pill blue">${p.name[lang]} · ${step+1}/${p.steps.length}</span> ${txt(s)}`; setAnim(s.anim);
+  $('dots').innerHTML=p.steps.map((_,i)=>`<span class="${i<=step?'on':''}"></span>`).join(''); }
+function say(t,cb){ if(!voice||!('speechSynthesis' in window)){ timer=setTimeout(cb,4200); return; } speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.lang=lang==='en'?'en-US':'es-US'; u.rate=kid?.95:1; let done=false; const fin=()=>{ if(done)return; done=true; timer=setTimeout(cb,800); }; u.onend=fin; u.onerror=fin; speechSynthesis.speak(u); setTimeout(fin,12000); }
+function playStep(){ if(!playing) return; show(); say(txt(PROCS[cur].steps[step]),()=>{ if(!playing) return; if(step<PROCS[cur].steps.length-1){ step++; playStep(); } else stop(); }); }
+function stop(){ playing=false; clearTimeout(timer); if('speechSynthesis' in window) speechSynthesis.cancel(); $('play').textContent='▶ Play'; }
+$('play').onclick=()=>{ if(playing) return stop(); playing=true; $('play').textContent='⏸ Pause'; if(step>=PROCS[cur].steps.length-1) step=0; Lab.track('chairside','plays'); playStep(); };
+$('next').onclick=()=>{ stop(); step=Math.min(step+1,PROCS[cur].steps.length-1); show(); };
+$('prev').onclick=()=>{ stop(); step=Math.max(step-1,0); show(); };
+$('lang').onclick=()=>{ lang=lang==='en'?'es':'en'; $('lang').textContent=lang==='en'?'🌐 English':'🌐 Español'; renderProcs(); show(); };
+$('lvl').onclick=()=>{ kid=1-kid; $('lvl').textContent='🧒 Kid mode: '+(kid?'on':'off'); show(); };
+$('voice').onclick=()=>{ voice=!voice; $('voice').textContent='🔊 Voice: '+(voice?'on':'off'); if(!voice&&'speechSynthesis' in window) speechSynthesis.cancel(); };
+$('printb').onclick=()=>{ const p=PROCS[cur]; const office=$('office').value.trim()||'Your dental office';
+  $('print').innerHTML=`<h1>${p.icon} ${p.name[lang]}</h1><p><b>${office}</b> · ${new Date().toLocaleDateString()}</p><p>${lang==='en'?'Typical time':'Tiempo típico'}: ${p.time}</p><h3>${lang==='en'?'What happens':'Qué sucede'}</h3><ol>${p.steps.map(s=>`<li>${txt(s)}</li>`).join('')}</ol><h3>${lang==='en'?'Aftercare':'Cuidados'}</h3><ul>${p.care[lang].map(c=>`<li>${c}</li>`).join('')}</ul><p style="font-size:11px;color:#555;margin-top:30px">${lang==='en'?'General education only. Follow the specific instructions from your dentist.':'Solo educación general. Sigue las instrucciones específicas de tu dentista.'}</p>`;
+  Lab.track('chairside','prints'); window.print(); };
+rs(); renderProcs(); show();
+window.__cs=()=>({cur,step,anim,lang,kid});
+</script></body></html>

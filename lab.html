@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alexander Haislip · product lab</title>
+<meta name="description" content="Ten small, free-to-host products built in public by Alexander Haislip.">
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+#bg{position:fixed;inset:0;z-index:-1;opacity:.55}
+.prod{display:flex;flex-direction:column;gap:8px;transition:.15s}.prod:hover{border-color:var(--blue);transform:translateY(-2px)}
+.prod .ic{font-size:34px}.prod .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+</style></head><body><canvas id="bg"></canvas><div class="wrap">
+<section class="hero">
+  <span class="pill green">built in public</span>
+  <h1 style="font-size:44px">Ten small products.<br>One shared lab.</h1>
+  <p class="lead">Every one of these is a plain static page you can open in a browser. No accounts, no checkout, and nothing to install. The revenue numbers on each dashboard are real, and right now they're $0.</p>
+</section>
+<h2>🚀 Public products</h2>
+<div class="grid g3" id="pub"></div>
+<h2>🔒 Private prototypes</h2>
+<p class="muted small">These are personal experiments that run on sample data. They aren't marketed, aren't for sale, and aren't affiliated with any employer or brand.</p>
+<div class="grid g3" id="priv"></div>
+</div>
+<script src="shared/vendor/three.min.js"></script>
+<script src="shared/lab.js"></script>
+<script>
+Lab.chrome({id:'lab', name:'Haislip Lab', icon:'🧪', tag:'10 products'});
+const P=[
+ ['weekly-game-drop/','🏁','Weekly Game Drop','A new browser game every week. This week: Neon Drift, a daily-seeded 3D racer where you race your own ghost.',[['play Neon Drift','weekly-game-drop/neon-drift/']]],
+ ['live-arcade/','📱','Live Arcade',"Party game on a big screen with phones as controllers. Scan the QR code and you're in. Peer-to-peer, no server.",[['host a room','live-arcade/host.html']]],
+ ['infinite-jam/','🎛','Infinite Jam','A visual stage that never stops. The crowd types prompts and the scene and music change to match.',[['open stage','infinite-jam/stage.html']]],
+ ['arcade-kit/','🧰','Arcade Kit','One script tag gives any web game scores, challenge links, tips and a sponsor slot.',[['demo game','arcade-kit/demo/']]],
+ ['podcast-to-playable/','🎙','Podcast → Playable','Paste a transcript and get quote cards, chapters, and a 3D quiz that fits in a single link.',[]],
+];
+const D=[
+ ['chairside-ai/','🧑‍⚕️','Chairside Explainer','3D procedure walkthroughs with voice, kid mode and Spanish.'],
+ ['smile-preview/','😁','Smile Preview','Whitening simulation that runs on the device. Photos never leave it.'],
+ ['dental-jobs/','🪥','OpenChair Jobs','A dental job board that requires a pay range on every listing. Sample data.'],
+ ['tooth-defender/','🦷','Tooth Defender','A 2-minute 3D brushing game with zone coaching and a certificate.'],
+ ['dental-jam/','🏆','Dental Build Jam','Concept page for a 7-day jam to build small dental tools.'],
+];
+const card=(p,priv)=>{ const a=Lab.h('div',{class:'card prod'}); a.innerHTML=`<div class="ic">${p[1]}</div><b>${p[2]}</b>${priv?'<span class="pill orange" style="align-self:flex-start">private prototype</span>':'<span class="pill green" style="align-self:flex-start">live mvp</span>'}<p class="small muted">${p[3]}</p>`;
+  const row=Lab.h('div',{class:'row'}); row.append(Lab.h('a',{class:'btn primary',href:p[0]},'open')); (p[4]||[]).forEach(([l,u])=>row.append(Lab.h('a',{class:'btn',href:u},l))); a.append(row); return a; };
+P.forEach(p=>document.getElementById('pub').append(card(p))); D.forEach(p=>document.getElementById('priv').append(card(p,true)));
+// background: slow drifting wire shapes
+const cv=document.getElementById('bg'), R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); R.setPixelRatio(Math.min(devicePixelRatio,1.5));
+const S=new THREE.Scene(), C=new THREE.PerspectiveCamera(60,1,.1,100); C.position.z=14;
+const geos=[new THREE.IcosahedronGeometry(1,0),new THREE.TorusKnotGeometry(.7,.2,60,8),new THREE.OctahedronGeometry(1),new THREE.BoxGeometry(1.3,1.3,1.3)];
+const objs=[]; for(let i=0;i<22;i++){ const m=new THREE.Mesh(geos[i%4],new THREE.MeshBasicMaterial({color:[0x238636,0x58a6ff,0x8957e5][i%3],wireframe:true,transparent:true,opacity:.35})); m.position.set((Math.random()-.5)*30,(Math.random()-.5)*18,-Math.random()*12); m.userData.v=new THREE.Vector3((Math.random()-.5)*.004,(Math.random()-.5)*.004,0); S.add(m); objs.push(m); }
+function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+let sy=0; addEventListener('scroll',()=>sy=scrollY);
+(function loop(){ requestAnimationFrame(loop); objs.forEach((o,i)=>{ o.rotation.x+=.002+i*1e-4; o.rotation.y+=.003; o.position.add(o.userData.v); }); C.position.y=-sy*.004; R.render(S,C); })();
+</script></body></html>

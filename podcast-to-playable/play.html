@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Episode Quiz · Podcast to Playable</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0}
+.q{position:fixed;top:16px;left:50%;transform:translateX(-50%);width:min(760px,92vw);z-index:5;text-align:center}
+.q .card{background:rgba(22,27,34,.9);backdrop-filter:blur(6px)}.q h2{margin:.2em 0;font-size:clamp(16px,2.6vw,22px);font-family:var(--sans)}
+.hud{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-family:var(--mono);z-index:5;display:flex;gap:10px;align-items:center}
+.end{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9;background:rgba(13,17,23,.75)}</style></head><body>
+<canvas id="c"></canvas>
+<div class="q"><div class="card"><div class="small muted" id="meta">loading…</div><h2 id="qt"></h2><div class="small muted">click the right answer block, or press 1-4</div></div></div>
+<div class="hud"><span class="pill green" id="sc">score 0</span><span class="pill" id="st">streak 0</span><span class="pill blue" id="tm">⏱ 15</span></div>
+<div class="end" id="end"><div class="card" style="text-align:center;max-width:420px"><h1 id="fin" style="font-size:34px"></h1><p class="muted" id="finS"></p>
+<div class="cta-row" style="justify-content:center"><button class="btn primary" id="again">↻ Play again</button><button class="btn" id="share">copy brag</button><a class="btn" href="./">make your own</a></div></div></div>
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/lab.js"></script>
+<script src="engine.js"></script>
+<script>
+(async () => {
+const $=id=>document.getElementById(id);
+let quiz; try { quiz = await P2P.unpack(location.hash.slice(1)); } catch(e) { quiz = null; }
+if (!quiz || !quiz.qs || !quiz.qs.length) { $('qt').textContent='This quiz link is empty or broken.'; $('meta').innerHTML='<a href="./">make one from any transcript →</a>'; return; }
+const R=new THREE.WebGLRenderer({canvas:$('c'),antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2));
+const S=new THREE.Scene(); S.background=new THREE.Color(0x0d1117); S.fog=new THREE.Fog(0x0d1117,14,40);
+const C=new THREE.PerspectiveCamera(55,1,.1,100); C.position.set(0,1.5,12);
+function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+S.add(new THREE.HemisphereLight(0xaabbff,0x111122,.9)); const dl=new THREE.DirectionalLight(0xffffff,1); dl.position.set(4,8,6); S.add(dl);
+const floor=new THREE.GridHelper(80,40,0x1f6feb,0x21262d); floor.position.y=-3; S.add(floor);
+const COLS=[0x1f6feb,0x238636,0x8957e5,0xd29922]; let blocks=[], parts=[], qi=0, score=0, streak=0, timer=15, locked=false;
+function label(txt,col){ const cv=document.createElement('canvas'); cv.width=512; cv.height=512; const c=cv.getContext('2d'); c.fillStyle='#'+col.toString(16).padStart(6,'0'); c.fillRect(0,0,512,512); c.fillStyle='rgba(0,0,0,.25)'; c.fillRect(0,400,512,112);
+  c.fillStyle='#fff'; c.textAlign='center'; let fs=txt.length>14?54:txt.length>9?70:88; c.font=`bold ${fs}px JetBrains Mono, monospace`; const words=txt.split(' '); let lines=[],l=''; words.forEach(w=>{ if(c.measureText(l+' '+w).width>460&&l){lines.push(l);l=w;} else l=l?l+' '+w:w;}); lines.push(l); lines.slice(0,3).forEach((ln,i)=>c.fillText(ln,256,256-(lines.length-1)*fs*.6+i*fs*1.2)); return new THREE.CanvasTexture(cv); }
+function show(){ blocks.forEach(b=>S.remove(b)); blocks=[]; locked=false; timer=15; const q=quiz.qs[qi];
+  $('meta').textContent=`${quiz.title} · question ${qi+1}/${quiz.qs.length} · ${q.type==='who'?'who said it?':'fill the blank'}`; $('qt').textContent=q.q;
+  q.opts.forEach((o,i)=>{ const tex=label(o,COLS[i]); const b=new THREE.Mesh(new THREE.BoxGeometry(2.6,2.6,2.6),[1,1,1,1,1,1].map((_,k)=>k===4?new THREE.MeshBasicMaterial({map:tex}):new THREE.MeshStandardMaterial({color:COLS[i],roughness:.35,metalness:.2})));
+    b.position.set((i-1.5)*3.3, -1+ (i%2)*.2, -2); b.userData={o,i,base:b.position.y}; b.rotation.y=(i-1.5)*-.12; S.add(b); blocks.push(b); }); }
+function burst(p,col,n=40){ for(let i=0;i<n;i++){ const m=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.18),new THREE.MeshBasicMaterial({color:col})); m.position.copy(p); m.userData={v:new THREE.Vector3((Math.random()-.5)*10,Math.random()*9,(Math.random()-.5)*8),l:1.2}; S.add(m); parts.push(m);} }
+function answer(i){ if(locked) return; locked=true; const q=quiz.qs[qi], b=blocks[i], ok = i>=0 && q.opts[i]===q.a;
+  if (ok){ streak++; const pts=100+Math.round(timer*10)+streak*20; score+=pts; burst(b.position,0x3fb950,60); S.remove(b); Lab.toast(`✓ +${pts}${streak>1?' · streak x'+streak:''}`,1200); }
+  else { streak=0; if(b) { burst(b.position,0xf85149,20); b.position.y-=.5; } const ci=q.opts.indexOf(q.a); blocks[ci].scale.setScalar(1.25); Lab.toast(`✗ it was "${q.a}"`,1500); }
+  $('sc').textContent='score '+score; $('st').textContent='streak '+streak;
+  setTimeout(()=>{ qi++; if(qi>=quiz.qs.length) finish(); else show(); }, 1400); }
+function finish(){ blocks.forEach(b=>S.remove(b)); $('fin').textContent=`${score} pts`; $('finS').textContent=`${quiz.title} · ${quiz.qs.length} questions`; $('end').style.display='flex';
+  $('share').onclick=()=>navigator.clipboard.writeText(`I scored ${score} on the "${quiz.title}" quiz 🎧🎮 can you beat it?\n${location.href}`).then(()=>Lab.toast('Copied')); }
+$('again').onclick=()=>{ qi=0; score=0; streak=0; $('end').style.display='none'; $('sc').textContent='score 0'; show(); };
+const ray=new THREE.Raycaster(), mv=new THREE.Vector2();
+addEventListener('pointerdown',e=>{ if(e.target!==R.domElement) return; mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1); ray.setFromCamera(mv,C); const h=ray.intersectObjects(blocks)[0]; if(h) answer(h.object.userData.i); });
+addEventListener('keydown',e=>{ const n=+e.key; if(n>=1&&n<=4&&blocks[n-1]) answer(n-1); });
+show(); const clk=new THREE.Clock();
+(function loop(){ requestAnimationFrame(loop); const dt=Math.min(clk.getDelta(),.05), t=performance.now()/1000;
+  blocks.forEach(b=>{ b.position.y=b.userData.base+Math.sin(t*2+b.userData.i)*.18; b.rotation.x=Math.sin(t+b.userData.i)*.08; });
+  for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.userData.v.y-=14*dt; p.position.addScaledVector(p.userData.v,dt); p.rotation.x+=dt*5; p.userData.l-=dt; if(p.userData.l<=0){S.remove(p);parts.splice(i,1);} }
+  if(!locked && $('end').style.display!=='flex'){ timer=Math.max(0,timer-dt); $('tm').textContent='⏱ '+Math.ceil(timer); if(timer<=0) answer(-1); }
+  floor.position.z=(t*2)%2; C.position.x=Math.sin(t*.3)*.6; C.lookAt(0,0,-2); R.render(S,C); })();
+window.__quiz=()=>({qi,score,n:quiz.qs.length});
+})();
+</script></body></html>

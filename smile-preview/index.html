@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smile Preview - private prototype</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+.app{display:grid;grid-template-columns:1fr 300px;gap:16px}@media(max-width:860px){.app{grid-template-columns:1fr}}
+#stage{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#010409;user-select:none;touch-action:none;aspect-ratio:4/3}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%}
+#after{clip-path:inset(0 0 0 50%)}
+#mask{opacity:.18;cursor:crosshair}
+#handle{position:absolute;top:0;bottom:0;width:3px;background:#fff;left:50%;box-shadow:0 0 12px #000;cursor:ew-resize}
+#handle::after{content:'⇔';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:#000;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.lbl{position:absolute;top:10px;font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:6px}
+.tools .btn{width:100%;margin-bottom:6px}.tools .btn.on{border-color:var(--blue);background:#1f6feb22}
+input[type=range]{width:100%}
+.shade{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted)}
+</style></head><body><div class="wrap">
+<section class="hero" style="padding-bottom:10px">
+  <h1 style="font-size:34px">See a brighter smile before the first visit.</h1>
+  <p class="lead">Load a selfie, tap the teeth, and drag the slider. It's a <b>cosmetic simulation that runs entirely on this device</b>. Photos are never uploaded.</p>
+</section>
+<div class="app">
+  <div>
+    <div id="stage"><canvas id="before"></canvas><canvas id="after"></canvas><canvas id="mask"></canvas><div id="handle"></div><span class="lbl" style="left:10px">before</span><span class="lbl" style="right:10px">simulation</span></div>
+    <p class="small muted" style="margin-top:8px">⚠️ This is a simulation for fun and conversation only. It is not a diagnosis, a treatment plan, or a promise of results. Images stay in your browser and nothing is uploaded.</p>
+  </div>
+  <div class="tools">
+    <div class="card"><b>1 · Photo</b><label class="btn" style="margin-top:8px;display:flex;justify-content:center">📷 Choose selfie<input type="file" accept="image/*" id="file" hidden></label><button class="btn" id="sample">use illustrated sample</button></div>
+    <div class="card" style="margin-top:10px"><b>2 · Select teeth</b>
+      <button class="btn on" id="wand" style="margin-top:8px">🪄 Tap-to-select (smart)</button><button class="btn" id="brush">🖌 Brush</button><button class="btn" id="erase">🧽 Erase</button>
+      <div class="small muted">Brush size</div><input type="range" id="size" min="4" max="60" value="18">
+      <div class="small muted">Smart select tolerance</div><input type="range" id="tol" min="5" max="80" value="30">
+      <button class="btn" id="clear">clear selection</button><button class="btn" id="showmask">👁 hide overlay</button></div>
+    <div class="card" style="margin-top:10px"><b>3 · Brightness</b><input type="range" id="lvl" min="0" max="100" value="60"><div class="shade"><span>natural</span><span>bright</span><span>hollywood</span></div>
+      <button class="btn primary" id="dl" style="margin-top:10px">⬇ Save before/after</button></div>
+  </div>
+</div>
+<h2>Ask about it (demo form)</h2>
+<div class="card"><p class="small muted">This is a prototype, so the form only saves to <b>this browser</b> to show how a practice would capture interest. Nothing is sent anywhere.</p>
+  <div class="grid g3"><input id="ln" placeholder="first name"><input id="lc" placeholder="phone or email"><select id="lw"><option>Just curious</option><option>Whitening</option><option>Veneers</option><option>Aligners</option></select></div>
+  <button class="btn" id="lsave" style="margin-top:10px">save (local only)</button> <button class="btn" id="lwipe">wipe local leads</button><div id="leads" class="log small" style="margin-top:10px"></div></div>
+<h2>Idea board</h2><div class="card" id="board"></div>
+<h2>Prototype dashboard</h2><div id="stats"></div>
+</div>
+<script src="../shared/lab.js"></script>
+<script>
+Lab.chrome({id:'smile-preview', name:'Smile Preview', icon:'😁', proto:true});
+Lab.board(document.getElementById('board'), {product:'Smile Preview (prototype)', seed:['Auto-detect teeth with on-device ML','Gap/shape simulation (veneers)','Office branding by URL','Side-by-side share card']});
+Lab.stats(document.getElementById('stats'), {product:'smile-preview', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Photos previewed','previews'],['Before/after saved','saves']], log:[['Oct 9','Prototype: smart select, brush, shade slider, before/after export, local-only form.']]});
+const $=id=>document.getElementById(id);
+const B=$('before'),A=$('after'),M=$('mask'); const bx=B.getContext('2d'),ax=A.getContext('2d'),mx=M.getContext('2d');
+let W=800,H=600,src=null,mode='wand',maskOn=true;
+function size(w,h){ W=w;H=h; [B,A,M].forEach(c=>{c.width=W;c.height=H;}); $('stage').style.aspectRatio=W+'/'+H; }
+function drawSample(){ size(800,600); const c=bx; const g=c.createLinearGradient(0,0,0,600); g.addColorStop(0,'#2b3a55'); g.addColorStop(1,'#141c2b'); c.fillStyle=g; c.fillRect(0,0,800,600);
+  c.fillStyle='#d9a37e'; c.beginPath(); c.ellipse(400,330,230,290,0,0,7); c.fill(); // face
+  c.fillStyle='#3a2a20'; c.beginPath(); c.ellipse(400,90,250,120,0,Math.PI,0); c.fill();
+  c.fillStyle='#fff'; [[320,250],[480,250]].forEach(([x,y])=>{c.beginPath();c.ellipse(x,y,38,20,0,0,7);c.fill(); c.fillStyle='#4a3020'; c.beginPath(); c.arc(x,y,13,0,7); c.fill(); c.fillStyle='#fff';});
+  c.fillStyle='#8a3b3b'; c.beginPath(); c.moveTo(270,410); c.quadraticCurveTo(400,350,530,410); c.quadraticCurveTo(400,520,270,410); c.fill(); // mouth
+  c.save(); c.beginPath(); c.moveTo(270,410); c.quadraticCurveTo(400,350,530,410); c.quadraticCurveTo(400,520,270,410); c.clip();
+  for(let i=0;i<8;i++){ const x=290+i*30; c.fillStyle=`rgb(${214+(i%2)*6},${190+(i%3)*4},${130+(i%2)*8})`; c.beginPath(); c.roundRect(x,378,27,46,6); c.fill(); }
+  for(let i=0;i<7;i++){ const x=305+i*30; c.fillStyle='rgb(206,182,128)'; c.beginPath(); c.roundRect(x,432,27,30,6); c.fill(); }
+  c.restore(); c.strokeStyle='#6b2a2a'; c.lineWidth=6; c.beginPath(); c.moveTo(270,410); c.quadraticCurveTo(400,350,530,410); c.quadraticCurveTo(400,520,270,410); c.stroke();
+  c.fillStyle='rgba(0,0,0,.5)'; c.font='14px JetBrains Mono, monospace'; c.fillText('illustrated sample (not a real person)',16,586);
+  src=bx.getImageData(0,0,W,H); mx.clearRect(0,0,W,H); wand(380,400); render(); }
+$('sample').onclick=drawSample;
+$('file').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ const s=Math.min(1,1200/Math.max(img.width,img.height)); size(Math.round(img.width*s),Math.round(img.height*s)); bx.drawImage(img,0,0,W,H); src=bx.getImageData(0,0,W,H); mx.clearRect(0,0,W,H); render(); URL.revokeObjectURL(img.src); Lab.track('smile-preview','previews'); }; img.src=URL.createObjectURL(f); };
+function render(){ if(!src) return; const lvl=$('lvl').value/100; const out=new ImageData(new Uint8ClampedArray(src.data),W,H); const m=mx.getImageData(0,0,W,H).data; const d=out.data;
+  for(let i=0;i<d.length;i+=4){ const a=m[i+3]/255; if(!a) continue; let r=d[i],g=d[i+1],b=d[i+2];
+    const L=(r+g+b)/3; // remove yellow (raise blue toward max), lift brightness, slight desaturate
+    const tb=Math.max(b, (r+g)/2*(1-.05)), k=lvl*a;
+    let nr=r+(255-r)*.45*k, ng=g+(255-g)*.5*k, nb=b+(tb-b)*k*1.1+(255-b)*.5*k;
+    const nl=(nr+ng+nb)/3; nr+= (nl-nr)*.35*k; ng+=(nl-ng)*.35*k; nb+=(nl-nb)*.2*k;
+    d[i]=nr; d[i+1]=ng; d[i+2]=Math.min(255,nb+6*k); }
+  ax.putImageData(out,0,0); M.style.opacity = maskOn?.18:0; }
+function pos(e){ const r=M.getBoundingClientRect(); return [ (e.clientX-r.left)/r.width*W, (e.clientY-r.top)/r.height*H ]; }
+function paint(x,y){ const s=+$('size').value*(W/800); mx.globalCompositeOperation= mode==='erase'?'destination-out':'source-over'; mx.fillStyle='#58a6ff'; mx.beginPath(); mx.arc(x,y,s,0,7); mx.fill(); mx.globalCompositeOperation='source-over'; }
+function wand(x,y){ x|=0;y|=0; const d=src.data, tol=+$('tol').value; const i0=(y*W+x)*4; const r0=d[i0],g0=d[i0+1],b0=d[i0+2];
+  // select every similar-colored pixel near the tap (teeth are separated by gaps, so this grabs the whole smile)
+  const R=Math.round(170*W/800), md=mx.getImageData(0,0,W,H);
+  const L0=r0+g0+b0, rg0=r0/(g0+1), bg0=b0/(g0+1), RY=Math.round(R*.5);
+  for(let py=Math.max(0,y-RY);py<Math.min(H,y+RY);py++) for(let px=Math.max(0,x-R*1.3);px<Math.min(W,x+R*1.3);px++){ const j=(py*W+(px|0))*4;
+    const r=d[j],g=d[j+1],b=d[j+2]; if(Math.abs(r/(g+1)-rg0)>tol/320 || Math.abs(b/(g+1)-bg0)>tol/240 || Math.abs(r+g+b-L0)>tol*3.5) continue; md.data[j]=88;md.data[j+1]=166;md.data[j+2]=255;md.data[j+3]=255; }
+  mx.putImageData(md,0,0);
+  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H; const t=tmp.getContext('2d'); t.filter='blur(1.5px)'; t.drawImage(M,0,0); mx.clearRect(0,0,W,H); mx.drawImage(tmp,0,0); }
+let down=false;
+M.onpointerdown=e=>{ if(!src) return; down=true; M.setPointerCapture(e.pointerId); const [x,y]=pos(e); if(mode==='wand'){ wand(x,y); render(); } else { paint(x,y); render(); } };
+M.onpointermove=e=>{ if(!down||mode==='wand') return; const [x,y]=pos(e); paint(x,y); render(); };
+M.onpointerup=()=>down=false;
+// split handle
+let dragH=false; const hd=$('handle');
+hd.onpointerdown=e=>{dragH=true; hd.setPointerCapture(e.pointerId); e.stopPropagation();};
+hd.onpointermove=e=>{ if(!dragH) return; const r=$('stage').getBoundingClientRect(); const p=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)); hd.style.left=p+'%'; A.style.clipPath=`inset(0 0 0 ${p}%)`; };
+hd.onpointerup=()=>dragH=false;
+for(const [id,m] of [['wand','wand'],['brush','brush'],['erase','erase']]) $(id).onclick=()=>{ mode=m; ['wand','brush','erase'].forEach(k=>$(k).classList.toggle('on',k===m)); };
+$('clear').onclick=()=>{ mx.clearRect(0,0,W,H); render(); };
+$('showmask').onclick=()=>{ maskOn=!maskOn; $('showmask').textContent=maskOn?'👁 hide overlay':'👁 show overlay'; render(); };
+$('lvl').oninput=render;
+$('dl').onclick=()=>{ if(!src) return; const c=document.createElement('canvas'); c.width=W*2; c.height=H+50; const x=c.getContext('2d'); x.fillStyle='#0d1117'; x.fillRect(0,0,c.width,c.height); x.putImageData(src,0,0); x.drawImage(A,W,0);
+  x.fillStyle='#e6edf3'; x.font='20px JetBrains Mono, monospace'; x.fillText('before',12,H+32); x.fillText('simulation - not a promised result',W+12,H+32);
+  const a=document.createElement('a'); a.download='smile-preview.png'; a.href=c.toDataURL(); a.click(); Lab.track('smile-preview','saves'); };
+// local-only leads
+function leads(){ const L=Lab.store.get('smile.leads',[]); $('leads').innerHTML = L.length? L.map(l=>`${l.t} · ${l.n} · ${l.c} · ${l.w}`).join('<br>') : 'no local entries'; }
+$('lsave').onclick=()=>{ const n=$('ln').value.trim(), c=$('lc').value.trim(); if(!n||!c) return Lab.toast('add a name and contact'); const L=Lab.store.get('smile.leads',[]); L.unshift({t:new Date().toLocaleString(),n,c,w:$('lw').value}); Lab.store.set('smile.leads',L.slice(0,50)); $('ln').value=$('lc').value=''; leads(); Lab.toast('saved on this device only'); };
+$('lwipe').onclick=()=>{ Lab.store.set('smile.leads',[]); leads(); };
+drawSample(); leads();
+window.__smile={wand:(x,y)=>{wand(x,y);render();}, px:(x,y)=>Array.from(ax.getImageData(x,y,1,1).data)};
+</script></body></html>

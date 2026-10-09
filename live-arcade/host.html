@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Arcade · Host screen</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.side{position:fixed;top:12px;right:12px;width:250px;z-index:5;display:flex;flex-direction:column;gap:10px}
+.side .card{padding:12px;background:rgba(22,27,34,.88);backdrop-filter:blur(6px)}
+.qr{background:#fff;border-radius:8px;padding:8px;display:flex;justify-content:center}.qr img{width:100%;image-rendering:pixelated}
+.code{font-family:var(--mono);font-size:30px;font-weight:800;letter-spacing:.1em;text-align:center;color:#3fb950}
+.lb{font-family:var(--mono);font-size:13px}.lb div{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #21262d}
+.lb i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.top{position:fixed;top:12px;left:12px;z-index:5;font-family:var(--mono)}
+.top b{font-size:32px}.hype{width:220px;height:10px;border:1px solid var(--border);border-radius:99px;overflow:hidden;margin-top:6px}.hype div{height:100%;width:0;background:linear-gradient(90deg,#d29922,#f85149)}
+.big{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;pointer-events:none;font-family:var(--mono);font-size:min(9vw,80px);font-weight:800;text-shadow:0 0 30px #bc8cff;opacity:0;transition:opacity .3s;text-align:center}
+.emo{position:fixed;font-size:34px;z-index:7;pointer-events:none;animation:up 2s ease-out forwards}@keyframes up{to{transform:translateY(-220px) scale(1.4);opacity:0}}
+.ctrl{position:fixed;bottom:12px;left:12px;z-index:5;display:flex;gap:6px;flex-wrap:wrap}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="top"><div class="muted small">CROWN RUSH · round</div><b id="clock">90</b><div class="small muted">hype meter: tap emojis on your phone</div><div class="hype"><div id="hype"></div></div><div class="small" id="net" style="margin-top:6px"></div></div>
+<div class="side">
+  <div class="card"><div class="small muted">join from your phone</div><div class="qr" id="qr"></div><div class="code" id="code"></div><div class="small muted" style="text-align:center;word-break:break-all" id="url"></div></div>
+  <div class="card lb" id="lb"><div class="muted">waiting for players…</div></div>
+  <div class="card small" id="spon"></div>
+</div>
+<div class="ctrl"><button class="btn" id="bots">+ 4 bots</button><button class="btn" id="newround">new round</button><a class="btn" href="./">← Live Arcade</a></div>
+<div class="big" id="big"></div>
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/vendor/peerjs.min.js"></script>
+<script src="../shared/vendor/qrcode.js"></script>
+<script src="../shared/lab.js"></script>
+<script src="net.js"></script>
+<script>
+(() => {
+const SPONSOR = null; // e.g. {name:'Acme', tagline:'...'} once a slot is sold
+const params = new URLSearchParams(location.search);
+const code = (params.get('room') || Math.random().toString(36).slice(2,7)).toUpperCase();
+if (!params.get('room')) history.replaceState(null,'','?room='+code);
+const joinUrl = new URL('play.html?room='+code, location.href).href;
+document.getElementById('code').textContent = code; document.getElementById('url').textContent = joinUrl.replace(/^https?:\/\//,'');
+const qr = qrcode(0,'M'); qr.addData(joinUrl); qr.make(); document.getElementById('qr').innerHTML = qr.createImgTag(5, 4);
+document.getElementById('spon').innerHTML = SPONSOR ? `This round is brought to you by <b>${SPONSOR.name}</b>` : `<span class="muted">arena floor sponsor:</span> <b>your ad here</b> · $150/mo<br><a href="${Lab.LINKS.x}" target="_blank">DM @alexnaughtonjr</a>`;
+
+// --- 3D arena
+const R = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2)); R.shadowMap.enabled = true;
+const S = new THREE.Scene(); S.background = new THREE.Color(0x0d1117); S.fog = new THREE.Fog(0x0d1117, 45, 110);
+const C = new THREE.PerspectiveCamera(50,1,.1,300); C.position.set(0, 34, 34); C.lookAt(0,0,0);
+function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+S.add(new THREE.HemisphereLight(0x99aaff,0x110022,.8));
+const sun = new THREE.DirectionalLight(0xffffff,1.1); sun.position.set(10,30,10); sun.castShadow = true; sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30}); S.add(sun);
+const ARENA = 20;
+// floor with sponsor/ad text baked in
+const fc = document.createElement('canvas'); fc.width=fc.height=1024; const g = fc.getContext('2d');
+const grd = g.createRadialGradient(512,512,50,512,512,512); grd.addColorStop(0,'#1c2330'); grd.addColorStop(1,'#0d1117'); g.fillStyle=grd; g.fillRect(0,0,1024,1024);
+g.strokeStyle='rgba(88,166,255,.18)'; g.lineWidth=2; for(let i=0;i<=1024;i+=64){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,1024); g.stroke(); g.beginPath(); g.moveTo(0,i); g.lineTo(1024,i); g.stroke(); }
+g.fillStyle='rgba(230,237,243,.10)'; g.font='bold 64px JetBrains Mono, monospace'; g.textAlign='center'; g.fillText(SPONSOR?SPONSOR.name:'YOUR AD HERE', 512, 880); g.font='32px JetBrains Mono, monospace'; g.fillText(SPONSOR?(SPONSOR.tagline||''):'floor slot · DM @alexnaughtonjr', 512, 930);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(ARENA, 64), new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(fc), roughness:.8})); floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; S.add(floor);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(ARENA, .35, 12, 96), new THREE.MeshBasicMaterial({color:0x58a6ff})); rim.rotation.x=-Math.PI/2; S.add(rim);
+const crown = new THREE.Group();
+const zone = new THREE.Mesh(new THREE.CylinderGeometry(4,4,.2,48,1,true), new THREE.MeshBasicMaterial({color:0xd29922, transparent:true, opacity:.35, side:THREE.DoubleSide})); crown.add(zone);
+const zoneBeam = new THREE.Mesh(new THREE.CylinderGeometry(4,4,14,48,1,true), new THREE.MeshBasicMaterial({color:0xd29922, transparent:true, opacity:.07, side:THREE.DoubleSide, depthWrite:false})); zoneBeam.position.y=7; crown.add(zoneBeam);
+const crownMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(.9,.25,64,8), new THREE.MeshStandardMaterial({color:0xd29922, emissive:0x553300, metalness:.9, roughness:.2})); crownMesh.position.y=5; crown.add(crownMesh);
+S.add(crown); let zoneR = 4;
+// pillars
+for (let i=0;i<12;i++){ const a=i/12*Math.PI*2; const p=new THREE.Mesh(new THREE.BoxGeometry(1,6+Math.random()*6,1), new THREE.MeshStandardMaterial({color:0x161b22, emissive:i%2?0x1f6feb:0x6e40c9, emissiveIntensity:.4})); p.position.set(Math.cos(a)*(ARENA+5),3,Math.sin(a)*(ARENA+5)); S.add(p); }
+
+// --- players
+const COLORS = [0x58a6ff,0x3fb950,0xbc8cff,0xf0883e,0xf85149,0xd29922,0x39c5cf,0xff7b72,0xa5d6ff,0x7ee787];
+const players = new Map(); let net;
+function nameSprite(name, col){ const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const c=cv.getContext('2d'); c.fillStyle='rgba(13,17,23,.7)'; c.fillRect(0,8,256,48); c.fillStyle='#'+col.toString(16).padStart(6,'0'); c.font='bold 30px JetBrains Mono, monospace'; c.textAlign='center'; c.fillText(name.slice(0,12),128,42); const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), depthTest:false})); s.scale.set(5,1.25,1); s.position.y=2.4; return s; }
+function addPlayer(id, name, bot){
+  if (players.has(id)) return players.get(id);
+  const col = COLORS[players.size % COLORS.length];
+  const grp = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1,32,16), new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:.25, metalness:.3, roughness:.35})); body.castShadow=true; grp.add(body);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.25,.08,8,32), new THREE.MeshBasicMaterial({color:col})); ring.rotation.x=Math.PI/2; ring.position.y=-.8; grp.add(ring);
+  grp.add(nameSprite(name, col));
+  const a = Math.random()*Math.PI*2; grp.position.set(Math.cos(a)*10,1,Math.sin(a)*10); S.add(grp);
+  const p = {id, name, col, grp, body, vx:0, vz:0, ix:0, iz:0, dashCd:0, score:0, bot, last:performance.now()};
+  players.set(id, p); drawLb(); bigText(`${name} joined`, 900); return p;
+}
+function removeIdle(){ const now=performance.now(); for (const [id,p] of players) if (!p.bot && now-p.last > 30000) { S.remove(p.grp); players.delete(id); drawLb(); } }
+setInterval(removeIdle, 5000);
+const bigEl = document.getElementById('big'); function bigText(t, ms=1400){ bigEl.textContent=t; bigEl.style.opacity=1; clearTimeout(bigText.t); bigText.t=setTimeout(()=>bigEl.style.opacity=0, ms); }
+function drawLb(){ const arr=[...players.values()].sort((a,b)=>b.score-a.score); document.getElementById('lb').innerHTML = arr.length ? arr.slice(0,10).map((p,i)=>`<div><span><i style="background:#${p.col.toString(16).padStart(6,'0')}"></i>${i===0?'👑 ':''}${p.name.replace(/[<>&]/g,'')}</span><b>${Math.floor(p.score)}</b></div>`).join('') : '<div class="muted">waiting for players…</div>'; }
+
+let hype = 0;
+function emote(e){ const el=document.createElement('div'); el.className='emo'; el.textContent=e; el.style.left=(10+Math.random()*70)+'%'; el.style.top=(55+Math.random()*30)+'%'; document.body.append(el); setTimeout(()=>el.remove(),2000); hype=Math.min(100,hype+4); }
+
+net = LANet.host(code, (m, reply) => {
+  if (!m || !m.id) return;
+  if (m.t==='join') { const p = addPlayer(m.id, String(m.name||'player').slice(0,12)); p.last=performance.now(); reply({t:'hello', col:p.col}); }
+  const p = players.get(m.id); if (!p) return; p.last = performance.now();
+  if (m.t==='in') { p.ix = Math.max(-1,Math.min(1,+m.x||0)); p.iz = Math.max(-1,Math.min(1,+m.y||0)); if (m.dash && p.dashCd<=0) { p.vx += p.ix*22; p.vz += p.iz*22; p.dashCd = 1.2; } }
+  if (m.t==='emo') emote(['🔥','😂','👑','💥','❤️'].includes(m.e)?m.e:'🔥');
+}, s => { document.getElementById('net').innerHTML = s==='online' ? '<span class="pill green">online · phones can join anywhere</span>' : s==='code-taken' ? '<span class="pill red">room code taken - reload</span>' : '<span class="pill orange">local mode · join from another tab on this device</span>'; });
+
+document.getElementById('bots').onclick = () => { for (let i=0;i<4;i++) addPlayer('bot'+Math.random().toString(36).slice(2,6), ['Byte','Pixel','Turbo','Glitch','Nova','Echo','Zap','Rook'][Math.floor(Math.random()*8)]+'🤖', true); };
+
+// --- round loop
+let roundT = 90, intermission = 0, meteors = [];
+function newRound(){ roundT=90; intermission=0; players.forEach(p=>p.score=0); moveZone(); bigText('CROWN RUSH!'); drawLb(); }
+document.getElementById('newround').onclick = newRound;
+function moveZone(){ const a=Math.random()*Math.PI*2, r=Math.random()*(ARENA-6); crown.position.set(Math.cos(a)*r,0,Math.sin(a)*r); }
+let zoneTimer = 12; moveZone(); bigText('scan to join', 2500);
+function meteorShower(){ bigText('☄️ HYPE STORM'); for(let i=0;i<10;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(.6,10,8), new THREE.MeshBasicMaterial({color:0xf0883e})); const a=Math.random()*Math.PI*2,r=Math.random()*ARENA*.9; m.position.set(Math.cos(a)*r, 30+i*4, Math.sin(a)*r); S.add(m); meteors.push(m);} }
+
+const clk = new THREE.Clock();
+function loop(){ requestAnimationFrame(loop); const dt = Math.min(clk.getDelta(), .05), t=performance.now()/1000;
+  crownMesh.rotation.y += dt*2; zone.material.opacity = .25+.15*Math.sin(t*4);
+  hype = Math.max(0, hype - dt*3); document.getElementById('hype').style.width = hype+'%'; if (hype>=99) { hype=0; meteorShower(); }
+  if (intermission>0) { intermission-=dt; if (intermission<=0) newRound(); }
+  else if (players.size) { roundT -= dt; zoneTimer -= dt; if (zoneTimer<=0) { zoneTimer=12; moveZone(); bigText('👑 crown moved', 900); }
+    if (roundT<=0) { roundT=0; const w=[...players.values()].sort((a,b)=>b.score-a.score)[0]; bigText(`👑 ${w.name} wins!`, 5000); intermission=7; players.forEach(p=>net.send(p.id,{t:'end', win:p===w})); } }
+  document.getElementById('clock').textContent = Math.ceil(roundT);
+  const inZone = [];
+  for (const p of players.values()) {
+    if (p.bot) { const dx=crown.position.x-p.grp.position.x, dz=crown.position.z-p.grp.position.z, d=Math.hypot(dx,dz)||1; p.ix = dx/d + Math.sin(t*1.3+p.col)*.4; p.iz = dz/d + Math.cos(t*1.1+p.col)*.4; if (d<6 && p.dashCd<=0 && Math.random()<.01){ p.vx+=p.ix*18; p.vz+=p.iz*18; p.dashCd=2; } }
+    p.dashCd -= dt; p.vx += p.ix*40*dt; p.vz += p.iz*40*dt; const damp=Math.pow(.18,dt); p.vx*=damp; p.vz*=damp;
+    p.grp.position.x += p.vx*dt; p.grp.position.z += p.vz*dt;
+    const r = Math.hypot(p.grp.position.x, p.grp.position.z); if (r > ARENA-1) { const nx=p.grp.position.x/r, nz=p.grp.position.z/r; p.grp.position.x=nx*(ARENA-1); p.grp.position.z=nz*(ARENA-1); const dot=p.vx*nx+p.vz*nz; p.vx-=2*dot*nx*1.2; p.vz-=2*dot*nz*1.2; }
+    p.body.rotation.x += p.vz*dt; p.body.rotation.z -= p.vx*dt;
+    p.grp.position.y = 1 + (p.dashCd>0.9 ? .4 : 0);
+    if (Math.hypot(p.grp.position.x-crown.position.x, p.grp.position.z-crown.position.z) < zoneR) inZone.push(p);
+  }
+  // collisions
+  const arr=[...players.values()];
+  for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){ const a=arr[i].grp.position,b=arr[j].grp.position; const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz); if(d<2&&d>0){ const nx=dx/d,nz=dz/d,push=(2-d)/2; a.x-=nx*push;a.z-=nz*push;b.x+=nx*push;b.z+=nz*push; const rel=(arr[j].vx-arr[i].vx)*nx+(arr[j].vz-arr[i].vz)*nz; if(rel<0){ arr[i].vx+=rel*nx*1.1;arr[i].vz+=rel*nz*1.1;arr[j].vx-=rel*nx*1.1;arr[j].vz-=rel*nz*1.1; } } }
+  if (intermission<=0 && inZone.length) inZone.forEach(p => p.score += dt*10/inZone.length);
+  // meteors
+  for (let i=meteors.length-1;i>=0;i--){ const m=meteors[i]; m.position.y-=dt*30; if(m.position.y<.5){ for(const p of players.values()){ const dx=p.grp.position.x-m.position.x,dz=p.grp.position.z-m.position.z,d=Math.hypot(dx,dz); if(d<5){ p.vx+=dx/(d||1)*25; p.vz+=dz/(d||1)*25; } } S.remove(m); meteors.splice(i,1);} }
+  if (Math.floor(t*4)!==loop.l){ loop.l=Math.floor(t*4); drawLb(); const sorted=arr.sort((a,b)=>b.score-a.score); sorted.forEach((p,i)=>{ if(!p.bot) net.send(p.id,{t:'state', score:Math.floor(p.score), rank:i+1, of:sorted.length, crown:inZone.includes(p), time:Math.ceil(roundT)}); }); }
+  C.position.x = Math.sin(t*.1)*6; C.lookAt(0,0,0);
+  R.render(S,C);
+}
+loop();
+window.__host = () => ({players:players.size, round:Math.ceil(roundT), scores:[...players.values()].map(p=>[p.name,Math.floor(p.score)])});
+})();
+</script></body></html>
