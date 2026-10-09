@@ -19,3 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+postprocessing.js is the r159 examples/jsm postprocessing stack
+(EffectComposer, RenderPass, UnrealBloomPass, OutputPass, and the shaders
+those passes include), bundled so it can run against the global THREE build
+in three.min.js. It is covered by the same MIT license. Nothing in this
+folder is loaded from a CDN at play time.

@@ -56,7 +56,7 @@ Free custom game for Alexander Haislip.
 
 `rainline/index.html`
 
-Free custom game for Alexander Haislip. A short 3D night block: freeflow stick combat, counters, a stone-perch takedown, grapple rings, glide, a stun disc, and a smoke pellet. Clear the alley crew for the win screen.
+Free custom game for Alexander Haislip. A short 3D night block: freeflow stick combat, counters, a stone-perch takedown, grapple rings, glide, a stun disc, and a smoke pellet. Clear the alley crew for the win screen. High quality adds soft shadows, neon bloom, denser rain, and lightning; `H` switches to Low if a laptop needs the lighter path.
 
 WebGL is required. Three.js is vendored in the game folder, so play does not call a CDN. Keyboard and mouse. Esc pauses even when the pointer is not locked, and the Pause button in the corner does the same. Title, pause, and result cards link back to all games. A local static server is the surest way to open it:
 

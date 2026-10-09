@@ -12,6 +12,7 @@
   <canvas id="view"></canvas>
   <div id="vignette"></div>
   <div id="flash"></div>
+  <div id="storm"></div>
   <div id="reticle" hidden></div>
 
   <header id="hud" hidden>
@@ -29,6 +30,7 @@
       <span id="alert">hidden</span>
       <span id="remain">6 left</span>
     </div>
+    <button id="hudQuality" type="button">Quality: High</button>
     <button id="hudPause" type="button">Pause</button>
   </header>
 
@@ -44,6 +46,7 @@
       <li><kbd>E</kbd> perch takedown</li>
       <li><kbd>Space</kbd> jump, hold to glide</li>
       <li><kbd>1</kbd> disc · <kbd>2</kbd> smoke</li>
+      <li><kbd>H</kbd> quality</li>
       <li><kbd>Esc</kbd> or Pause</li>
     </ul>
     <p class="leave"><a class="back" href="../index.html">All games</a></p>
@@ -64,6 +67,7 @@
       <p class="sub">Stick Vigilante</p>
       <p class="lead">A rainy night on an original block. Chain strikes between the alley crew, counter the red warning over a thug’s head, drop from the stone perch, and grapple the neon rings.</p>
       <button id="start" type="button">Start the vigil</button>
+      <p class="actions"><button id="titleQuality" class="ghost" type="button">Quality: High</button></p>
       <p class="credit"><a class="back" href="../index.html">All games</a></p>
       <p class="credit">Free custom game for Alexander Haislip</p>
     </div>
@@ -93,6 +97,7 @@
   <p id="fail" class="fail hidden">This browser has no WebGL context, so Rainline cannot start. <a class="back" href="../index.html">All games</a></p>
 
   <script src="vendor/three.min.js"></script>
+  <script src="vendor/postprocessing.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

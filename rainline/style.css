@@ -50,6 +50,16 @@ html, body {
 
 body.slow #flash { opacity: 1; }
 body.hurt #flash { background: rgba(248, 81, 73, 0.28); opacity: 1; }
+body.impact #flash { background: rgba(255, 244, 214, 0.38); opacity: 1; }
+
+#storm {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(214, 228, 255, 0.62);
+  opacity: 0;
+  z-index: 2;
+}
 
 #reticle {
   position: fixed;
@@ -197,7 +207,7 @@ a.back {
 a.back:hover { text-decoration: underline; }
 a.back:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 
-#hudPause {
+#hudPause, #hudQuality {
   pointer-events: auto;
   flex: none;
   margin-left: 4px;
@@ -206,10 +216,23 @@ a.back:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
   border-radius: 8px;
   background: rgba(22, 27, 34, 0.92);
   color: var(--text);
+  font-family: var(--mono);
   font-size: 12px;
+  font-weight: 650;
 }
 
-#hudPause:hover { background: #30363d; }
+#hudPause:hover, #hudQuality:hover { background: #30363d; }
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+}
+
+button.ghost:hover { background: #30363d; }
+
+.actions { margin: 0 0 4px; }
 
 kbd {
   display: inline-block;
