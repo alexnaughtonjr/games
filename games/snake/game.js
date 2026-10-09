@@ -29,7 +29,7 @@ const DIRS = {
 let cell = 24;
 let snake = [];
 let dir = { x: 1, y: 0 };
-let nextDir = { x: 1, y: 0 };
+let dirQueue = [];
 let food = { x: 10, y: 10 };
 let score = 0;
 let high = readHigh();
@@ -95,7 +95,7 @@ function freshSnake() {
     { x: 6, y: 10 },
   ];
   dir = { x: 1, y: 0 };
-  nextDir = { x: 1, y: 0 };
+  dirQueue = [];
   score = 0;
   tickMs = 200;
   acc = 0;
@@ -139,15 +139,17 @@ function togglePause() {
 
 function endGame(title, text) {
   state = "over";
+  dirQueue = [];
   updateHud();
   showOverlay(title, text, "Play again");
+  overlayRestart.focus({ preventScroll: true });
 }
 
 function launch(nx, ny) {
   const head = snake[0];
   snake = [0, 1, 2].map((i) => ({ x: head.x - nx * i, y: head.y - ny * i }));
   dir = { x: nx, y: ny };
-  nextDir = dir;
+  dirQueue = [];
   if (snake.some((s) => s.x === food.x && s.y === food.y)) placeFood();
   state = "running";
   acc = 0;
@@ -156,26 +158,59 @@ function launch(nx, ny) {
   canvas.focus({ preventScroll: true });
 }
 
-function setDir(nx, ny) {
-  if (state === "over") return;
-  if (state === "ready" || state === "hold" || state === "paused") {
-    if (state === "paused" && nx === -dir.x && ny === -dir.y) return;
-    if (state === "paused") {
-      nextDir = { x: nx, y: ny };
-      state = "running";
-      hideOverlay();
-      updateHud();
+function playAgain() {
+  if (state === "over") {
+    freshSnake();
+    state = "hold";
+    hideOverlay();
+    updateHud();
+    canvas.focus({ preventScroll: true });
+    return;
+  }
+  revealBoard();
+}
+
+// Keep at most two turns. Each one is checked against the turn before it,
+// so a second keypress in the same tick cannot reverse into the neck.
+function enqueueDir(nx, ny) {
+  if (dirQueue.length >= 2) {
+    const prev = dirQueue[0];
+    const last = dirQueue[1];
+    if (nx === last.x && ny === last.y) return;
+    if (nx === prev.x && ny === prev.y) {
+      dirQueue.pop();
       return;
     }
+    if (nx === -prev.x && ny === -prev.y) return;
+    dirQueue[1] = { x: nx, y: ny };
+    return;
+  }
+  const base = dirQueue.length ? dirQueue[0] : dir;
+  if (nx === base.x && ny === base.y) return;
+  if (nx === -base.x && ny === -base.y) return;
+  dirQueue.push({ x: nx, y: ny });
+}
+
+function setDir(nx, ny) {
+  if (state === "over") return;
+  if (state === "ready" || state === "hold") {
     launch(nx, ny);
     return;
   }
-  if (nx === -nextDir.x && ny === -nextDir.y) return;
-  nextDir = { x: nx, y: ny };
+  if (state === "paused") {
+    const last = dirQueue.length ? dirQueue[dirQueue.length - 1] : dir;
+    if (nx === -last.x && ny === -last.y) return;
+    enqueueDir(nx, ny);
+    state = "running";
+    hideOverlay();
+    updateHud();
+    return;
+  }
+  enqueueDir(nx, ny);
 }
 
 function step() {
-  dir = nextDir;
+  if (dirQueue.length) dir = dirQueue.shift();
   const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
   if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS) {
     endGame("Game over", "You hit the wall. Score " + score + ".");
@@ -320,7 +355,7 @@ pauseBtn.addEventListener("click", () => {
   else togglePause();
 });
 restartBtn.addEventListener("click", restart);
-overlayRestart.addEventListener("click", revealBoard);
+overlayRestart.addEventListener("click", playAgain);
 
 pad.addEventListener("pointerdown", (e) => {
   const btn = e.target.closest("button");

@@ -125,6 +125,27 @@
       font-weight: 650;
     }
 
+    .req {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 1.4em;
+      margin-right: 6px;
+      padding: 0 5px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-align: center;
+    }
+
     footer {
       margin-top: 28px;
       color: var(--muted);
@@ -140,7 +161,7 @@
     <p class="lede">Small, free browser games. Open one and play — nothing to install, and no account required.</p>
     <ul class="games">
       <li>
-        <a href="games/snake/index.html">
+        <a href="games/snake/index.html" aria-keyshortcuts="1">
           <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
             <rect x="4" y="14" width="8" height="8" rx="2" fill="#238636"/>
             <rect x="14" y="14" width="8" height="8" rx="2" fill="#238636"/>
@@ -149,11 +170,12 @@
           </svg>
           <h2>Snake</h2>
           <p>Steer a growing snake, eat the blue pellets, and beat the best score saved in this browser.</p>
+          <span class="req"><kbd>1</kbd>Offline</span>
           <span class="play">Play</span>
         </a>
       </li>
       <li>
-        <a href="games/memory/index.html">
+        <a href="games/memory/index.html" aria-keyshortcuts="2">
           <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
             <rect x="4" y="6" width="12" height="12" rx="2" fill="#161b22" stroke="#238636" stroke-width="2"/>
             <rect x="20" y="6" width="12" height="12" rx="2" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
@@ -162,11 +184,12 @@
           </svg>
           <h2>Memory Match</h2>
           <p>Flip cards, remember eight pairs, and finish in as few moves as you can.</p>
+          <span class="req"><kbd>2</kbd>Offline</span>
           <span class="play">Play</span>
         </a>
       </li>
       <li>
-        <a href="vibe-coder/index.html">
+        <a href="vibe-coder/index.html" aria-keyshortcuts="3">
           <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
             <rect x="3" y="6" width="16" height="22" rx="2" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
             <rect x="6" y="10" width="10" height="2" rx="1" fill="#3fb950"/>
@@ -177,11 +200,12 @@
           </svg>
           <h2>Vibe Coder</h2>
           <p>Clear glitchy landing-page shards in 3D, deploy before the coffee runs dry, and beat the best score saved in this browser.</p>
+          <span class="req"><kbd>3</kbd>WebGL</span>
           <span class="play">Play</span>
         </a>
       </li>
       <li>
-        <a href="rainline/index.html">
+        <a href="rainline/index.html" aria-keyshortcuts="4">
           <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
             <rect x="4" y="16" width="4" height="14" rx="2" fill="#8b949e"/>
             <circle cx="6" cy="12" r="3" fill="#e6edf3"/>
@@ -191,11 +215,27 @@
           </svg>
           <h2>Rainline</h2>
           <p>A stick vigilante on a rainy night block. Chain strikes, counter, grapple, and clear the crew.</p>
+          <span class="req"><kbd>4</kbd>WebGL · keyboard</span>
           <span class="play">Play</span>
         </a>
       </li>
     </ul>
-    <footer>Primer dark · #0d1117 / #161b22 · #238636 · #58a6ff</footer>
+    <footer>Press 1–4 to open a game. Primer dark · #0d1117 / #161b22 · #238636 · #58a6ff</footer>
   </main>
+  <script>
+    const jumps = {
+      "1": "games/snake/index.html",
+      "2": "games/memory/index.html",
+      "3": "vibe-coder/index.html",
+      "4": "rainline/index.html"
+    };
+    document.addEventListener("keydown", (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+      if (e.target.closest("input, textarea, select")) return;
+      const href = jumps[e.key];
+      if (!href) return;
+      window.location.href = href;
+    });
+  </script>
 </body>
 </html>
