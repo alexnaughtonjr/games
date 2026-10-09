@@ -15,3 +15,4 @@ Open `index.html` in a browser. WebGL is required. Three.js is the copy vendored
 - Blue cores are worth 100. Height adds 10 points per meter
 - Falling off a ledge ends the run. `R` or Climb again builds a new shaft
 - The green pad at the top lights the relay and wins the run
+- Green chevrons are boost pads. Red lips crumble after you land. Blue slabs slide under you

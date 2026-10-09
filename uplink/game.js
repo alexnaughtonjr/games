@@ -45,11 +45,13 @@
     coyote: 0,
     buffer: 0,
     mesh: null,
-    shadow: null
+    shadow: null,
+    ride: null
   };
 
   const platforms = [];
   const cores = [];
+  const coreWorld = new THREE.Vector3();
   let goalBulb = null;
 
   const canvas = $("view");
@@ -192,6 +194,7 @@
     const dt = Math.min(clock.getDelta(), 0.033);
     state.time += dt;
     spinCores(dt);
+    updatePlatforms(dt);
     if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
     if (state.mode === "run") stepPlayer(dt);
     else if (state.mode === "title") idleCourier();
@@ -247,6 +250,7 @@
       for (let i = 0; i < platforms.length; i++) {
         const p = platforms[i];
         const top = p.y + p.h;
+        if (p.falling) continue;
         if (Math.abs(player.x - p.x) > p.w / 2 + player.radius * 0.25) continue;
         if (Math.abs(player.z - p.z) > p.d / 2 - 0.08) continue;
         if (prevY >= top - 0.04 && player.y <= top + 0.12) {
@@ -265,6 +269,19 @@
     } else player.coyote -= dt;
 
     collectCores();
+
+    player.ride = null;
+    if (landed && !landed.falling) {
+      if (landed.kind === "boost") {
+        player.vy = 12.8;
+        player.grounded = false;
+        player.coyote = 0;
+        player.buffer = 0;
+      } else {
+        player.ride = landed;
+        if (landed.kind === "crumble" && landed.crumbleT == null) landed.crumbleT = 0.52;
+      }
+    }
 
     player.mesh.position.set(player.x, player.y, player.z);
 
@@ -320,13 +337,39 @@
     for (let i = 0; i < cores.length; i++) {
       const c = cores[i];
       if (c.got) continue;
-      const dx = player.x - c.mesh.position.x;
-      const dy = py - c.mesh.position.y;
-      const dz = player.z - c.mesh.position.z;
+      c.mesh.getWorldPosition(coreWorld);
+      const dx = player.x - coreWorld.x;
+      const dy = py - coreWorld.y;
+      const dz = player.z - coreWorld.z;
       if (dx * dx + dy * dy + dz * dz < 0.42) {
         c.got = true;
         c.mesh.visible = false;
         state.cores += 1;
+      }
+    }
+  }
+
+  function updatePlatforms(dt) {
+    for (let i = 0; i < platforms.length; i++) {
+      const p = platforms[i];
+      if (p.kind === "mover" && !p.falling) {
+        const prev = p.x;
+        p.x = p.baseX + Math.sin(state.time * p.speed + p.phase) * p.amp;
+        p.mesh.position.x = p.x;
+        if (player.ride === p) player.x += p.x - prev;
+      }
+      if (p.kind === "crumble" && p.crumbleT != null && !p.falling) {
+        p.crumbleT -= dt;
+        const jolt = p.crumbleT < 0.28 ? Math.sin(state.time * 48) * 0.04 : 0;
+        p.mesh.position.x = p.x + jolt;
+        if (p.crumbleT <= 0) p.falling = true;
+      }
+      if (p.falling) {
+        p.fallV -= 32 * dt;
+        p.y += p.fallV * dt;
+        p.mesh.position.y = p.y;
+        p.mesh.rotation.z += dt * 1.4;
+        if (player.ride === p) player.ride = null;
       }
     }
   }
@@ -349,6 +392,7 @@
     player.vy = 0;
     player.grounded = true;
     player.coyote = 0.12;
+    player.ride = null;
     player.mesh.position.set(player.x, player.y, player.z);
     player.shadow.position.set(player.x, player.y + 0.03, player.z);
   }
@@ -463,10 +507,40 @@
 
   function clearCourse() {
     for (let i = 0; i < platforms.length; i++) disposeObject(platforms[i].mesh);
-    for (let i = 0; i < cores.length; i++) disposeObject(cores[i].mesh);
     platforms.length = 0;
     cores.length = 0;
     goalBulb = null;
+  }
+
+  function placeAfterBoost(prev, rand) {
+    const step = 2.2 + rand() * 0.6;
+    const w = 2.25 + rand() * 0.45;
+    const limit = SHAFT_HALF - w / 2 - 0.08;
+    const x = Math.max(-limit, Math.min(limit, prev.x + (rand() - 0.5) * 0.7));
+    return { x, y: prev.y + step, w, kind: "solid" };
+  }
+
+  function tagSpecial(next, prev, rand) {
+    if (prev.kind === "boost" || next.y < 16) return;
+    const roll = rand();
+    if (roll < 0.16) {
+      next.kind = "crumble";
+      return;
+    }
+    if (roll < 0.32) {
+      next.kind = "mover";
+      next.amp = 0.42 + rand() * 0.18;
+      next.speed = 0.85 + rand() * 0.4;
+      next.phase = rand() * Math.PI * 2;
+      const limit = SHAFT_HALF - next.w / 2 - next.amp - 0.08;
+      next.x = Math.max(-limit, Math.min(limit, next.x));
+      next.baseX = next.x;
+      return;
+    }
+    if (roll < 0.44 && prev.kind !== "crumble") {
+      next.kind = "boost";
+      next.w = Math.min(3.15, next.w + 0.4);
+    }
   }
 
   function disposeObject(mesh) {
@@ -486,40 +560,52 @@
     const layout = STAIR.map((s) => ({ x: s.x, y: s.y, w: s.w, kind: "solid" }));
     let prev = layout[layout.length - 1];
     while (prev.y < 62) {
-      prev = placeNext(prev, rand);
-      layout.push(prev);
+      const next = prev.kind === "boost" ? placeAfterBoost(prev, rand) : placeNext(prev, rand);
+      tagSpecial(next, prev, rand);
+      layout.push(next);
+      prev = next;
     }
-    const goalW = 3.6;
-    const goalLimit = SHAFT_HALF - goalW / 2 - 0.05;
-    const goal = {
-      x: Math.max(-goalLimit, Math.min(goalLimit, prev.x * 0.4)),
-      y: prev.y + 1.18,
-      w: goalW,
-      kind: "goal"
-    };
-    if (!canReach(prev, goal)) {
-      goal.x = prev.x;
-      goal.y = prev.y + 1.12;
-      goal.w = Math.max(2.8, Math.min(3.8, prev.w + 0.8));
+    let goal;
+    if (prev.kind === "boost") {
+      goal = placeAfterBoost(prev, rand);
+      goal.kind = "goal";
+      goal.w = Math.max(goal.w, 3.1);
+    } else {
+      const goalW = 3.6;
+      const goalLimit = SHAFT_HALF - goalW / 2 - 0.05;
+      goal = {
+        x: Math.max(-goalLimit, Math.min(goalLimit, prev.x * 0.4)),
+        y: prev.y + 1.18,
+        w: goalW,
+        kind: "goal"
+      };
+      if (!canReach(prev, goal)) {
+        goal.x = prev.x;
+        goal.y = prev.y + 1.12;
+        goal.w = Math.max(2.8, Math.min(3.8, prev.w + 0.8));
+      }
     }
     layout.push(goal);
     for (let i = 0; i < layout.length; i++) {
-      addPlatform({
+      const rec = addPlatform({
         x: layout[i].x,
         y: layout[i].y,
         z: PLAT_Z,
         w: layout[i].w,
         h: PLAT_H,
         d: PLAT_D,
-        kind: layout[i].kind
+        kind: layout[i].kind,
+        baseX: layout[i].baseX,
+        amp: layout[i].amp,
+        speed: layout[i].speed,
+        phase: layout[i].phase
       });
-      if (layout[i].kind === "solid" && i > 1 && i % 3 === 0) {
-        addCore(layout[i].x, layout[i].y + PLAT_H + 0.72, 0.05, i);
-      }
+      const kind = layout[i].kind;
+      if ((kind === "solid" || kind === "boost") && i > 1 && i % 3 === 0) addCore(rec, i);
     }
   }
 
-  function addCore(x, y, z, phase) {
+  function addCore(platform, phase) {
     const mesh = new THREE.Mesh(
       new THREE.OctahedronGeometry(0.16, 0),
       new THREE.MeshStandardMaterial({
@@ -530,9 +616,9 @@
         metalness: 0.15
       })
     );
-    mesh.position.set(x, y, z);
-    scene.add(mesh);
-    cores.push({ mesh, baseY: y, phase, got: false });
+    mesh.position.set(0, PLAT_H + 0.72, 0.15);
+    platform.mesh.add(mesh);
+    cores.push({ mesh, baseY: PLAT_H + 0.72, phase, got: false });
   }
 
   function addPlatform(spec) {
@@ -550,7 +636,9 @@
     body.position.y = spec.h / 2;
     group.add(body);
 
-    const lipColor = spec.kind === "goal" ? 0x238636 : 0x58a6ff;
+    const lipColor = spec.kind === "goal" || spec.kind === "boost" ? 0x238636
+      : spec.kind === "crumble" ? 0xf85149
+      : 0x58a6ff;
     const lip = new THREE.Mesh(
       new THREE.BoxGeometry(spec.w + 0.05, 0.045, 0.07),
       new THREE.MeshStandardMaterial({
@@ -563,6 +651,15 @@
     );
     lip.position.set(0, spec.h - 0.02, spec.d / 2 - 0.02);
     group.add(lip);
+
+    if (spec.kind === "boost") {
+      const chevron = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.max(0.4, spec.w * 0.22), 0.05, 0.42),
+        new THREE.MeshStandardMaterial({ color: 0x3fb950, emissive: 0x238636, emissiveIntensity: 1.6, roughness: 0.3 })
+      );
+      chevron.position.set(0, spec.h + 0.03, 0.1);
+      group.add(chevron);
+    }
 
     if (spec.kind === "goal") {
       const mast = new THREE.Mesh(
@@ -590,7 +687,14 @@
       w: spec.w,
       h: spec.h,
       d: spec.d,
-      kind: spec.kind
+      kind: spec.kind,
+      baseX: spec.baseX != null ? spec.baseX : spec.x,
+      amp: spec.amp || 0,
+      speed: spec.speed || 1,
+      phase: spec.phase || 0,
+      crumbleT: null,
+      falling: false,
+      fallV: 0
     };
     platforms.push(record);
     return record;
