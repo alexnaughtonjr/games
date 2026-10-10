@@ -62,6 +62,7 @@
   const platforms = [];
   const cores = [];
   const lasers = [];
+  const gusts = [];
   const coreWorld = new THREE.Vector3();
   let goalBulb = null;
   let dustGeo = null;
@@ -381,6 +382,7 @@
     if (state.mode !== "pause") {
       spinCores(dt);
       updatePlatforms(dt);
+      updateGusts(dt);
       updateAtmosphere(dt);
       updateLasers();
       if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
@@ -408,6 +410,7 @@
     const dir = (right ? 1 : 0) - (left ? 1 : 0);
     const desired = dir * MOVE_SPEED;
     player.vx += (desired - player.vx) * Math.min(1, dt * 9);
+    applyGusts(dt);
 
     if (jumpEdge) player.buffer = 0.14;
     jumpEdge = false;
@@ -573,6 +576,20 @@
         p.mesh.position.x = p.x;
         if (player.ride === p) player.x += p.x - prev;
       }
+      if (p.kind === "lift" && !p.falling) {
+        const prevY = p.y;
+        const wave = Math.sin(state.time * p.speed + p.phase) * 0.5 + 0.5;
+        p.y = p.baseY + wave * p.amp;
+        p.mesh.position.y = p.y;
+        if (player.ride === p) player.y += p.y - prevY;
+        if (p.cable) {
+          const top = p.baseY + p.amp + 0.95;
+          const span = Math.max(0.2, top - (p.y + p.h));
+          p.cable.scale.y = span;
+          p.cable.position.y = p.h + span / 2;
+        }
+        if (p.pulley) p.pulley.rotation.z += dt * (1.4 + p.speed);
+      }
       if (p.kind === "crumble" && p.crumbleT != null && !p.falling) {
         p.crumbleT -= dt;
         const jolt = p.crumbleT < 0.28 ? Math.sin(state.time * 48) * 0.04 : 0;
@@ -734,11 +751,19 @@
   }
 
   function clearCourse() {
-    for (let i = 0; i < platforms.length; i++) disposeObject(platforms[i].mesh);
+    for (let i = 0; i < platforms.length; i++) {
+      disposeObject(platforms[i].mesh);
+      if (platforms[i].guide) disposeObject(platforms[i].guide);
+    }
     for (let i = 0; i < lasers.length; i++) disposeObject(lasers[i].group);
+    for (let i = 0; i < gusts.length; i++) {
+      disposeObject(gusts[i].vent);
+      disposeObject(gusts[i].points);
+    }
     platforms.length = 0;
     cores.length = 0;
     lasers.length = 0;
+    gusts.length = 0;
     goalBulb = null;
   }
 
@@ -800,6 +825,13 @@
         next.x = Math.max(-limit, Math.min(limit, Math.max(-1.1, Math.min(1.1, next.x))));
         nextBeacon += 22;
       } else tagSpecial(next, prev, rand);
+      if (next.kind === "solid" && next.y > 12 && rand() < 0.2) {
+        next.kind = "lift";
+        next.amp = 1.2 + rand() * 0.75;
+        next.speed = 0.58 + rand() * 0.38;
+        next.phase = rand() * Math.PI * 2;
+        next.baseY = next.y;
+      }
       if (next.y > 30 && next.kind !== "beacon" && prev.kind !== "beacon" && rand() < 0.28) {
         laserGaps.push(prev.y + PLAT_H + (next.y - prev.y) * 0.5);
       }
@@ -839,12 +871,106 @@
         baseX: layout[i].baseX,
         amp: layout[i].amp,
         speed: layout[i].speed,
-        phase: layout[i].phase
+        phase: layout[i].phase,
+        baseY: layout[i].baseY
       });
       const kind = layout[i].kind;
       if ((kind === "solid" || kind === "boost" || kind === "beacon") && i > 1 && i % 3 === 0) addCore(rec, i);
     }
     for (let i = 0; i < laserGaps.length; i++) addLaser(laserGaps[i], rand() * Math.PI * 2, 1.15 + rand() * 0.55);
+    for (let i = 1; i < layout.length; i++) {
+      const step = layout[i];
+      const below = layout[i - 1];
+      if (step.y < 10 || step.kind === "goal" || step.kind === "beacon" || below.kind === "beacon") continue;
+      if (rand() > 0.16) continue;
+      const mid = below.y + PLAT_H + (step.y - below.y) * 0.55;
+      addGust(mid, rand() < 0.5 ? -1 : 1);
+    }
+  }
+
+  function addGust(y, dir) {
+    const fromRight = dir < 0;
+    const vent = new THREE.Group();
+    const housing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.86, 0.62),
+      new THREE.MeshStandardMaterial({
+        color: 0x161b22,
+        metalness: 0.58,
+        roughness: 0.38,
+        emissive: 0x0d2138,
+        emissiveIntensity: 0.6
+      })
+    );
+    housing.castShadow = true;
+    vent.add(housing);
+    const slit = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.52, 0.38),
+      new THREE.MeshStandardMaterial({
+        color: 0x58a6ff,
+        emissive: 0x58a6ff,
+        emissiveIntensity: 2.5,
+        roughness: 0.18
+      })
+    );
+    slit.position.x = fromRight ? -0.14 : 0.14;
+    vent.add(slit);
+    const vaneMat = new THREE.MeshStandardMaterial({ color: 0x30363d, metalness: 0.5, roughness: 0.4 });
+    for (let i = -1; i <= 1; i++) {
+      const vane = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 0.4), vaneMat);
+      vane.position.set(fromRight ? -0.16 : 0.16, i * 0.16, 0);
+      vane.rotation.z = dir * 0.5;
+      vent.add(vane);
+    }
+    vent.position.set(fromRight ? 3.78 : -3.78, y, 0.2);
+    scene.add(vent);
+
+    const count = 32;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    const seeds = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 6.2;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 0.7;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 0.35;
+      seeds[i] = Math.random();
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const points = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: 0x58a6ff,
+      size: 5,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false,
+      sizeAttenuation: true
+    }));
+    points.position.set(0, y, 0.25);
+    scene.add(points);
+    gusts.push({ vent, points, geo, seeds, y, dir, count });
+  }
+
+  function updateGusts(dt) {
+    for (let i = 0; i < gusts.length; i++) {
+      const g = gusts[i];
+      const arr = g.geo.attributes.position.array;
+      for (let n = 0; n < g.count; n++) {
+        arr[n * 3] += g.dir * dt * (4.2 + g.seeds[n] * 3.1);
+        if (arr[n * 3] > 3.35) arr[n * 3] = -3.35;
+        if (arr[n * 3] < -3.35) arr[n * 3] = 3.35;
+      }
+      g.geo.attributes.position.needsUpdate = true;
+      const slit = g.vent.children[1];
+      if (slit && slit.material) slit.material.emissiveIntensity = 2.1 + Math.sin(state.time * 9 + i) * 0.5;
+    }
+  }
+
+  function applyGusts(dt) {
+    const body = player.y + 0.45;
+    for (let i = 0; i < gusts.length; i++) {
+      const g = gusts[i];
+      if (Math.abs(body - g.y) > 1.05) continue;
+      if (Math.abs(player.z - 0.2) > 1.35) continue;
+      player.vx += g.dir * 34 * dt;
+    }
   }
 
   function addLaser(y, phase, speed) {
@@ -900,7 +1026,7 @@
     const lipColor = spec.kind === "goal" || spec.kind === "boost" ? 0x238636
       : spec.kind === "crumble" ? 0xf85149
       : 0x58a6ff;
-    const lipGlow = spec.kind === "beacon" ? 2.3 : spec.kind === "goal" ? 2 : 1.55;
+    const lipGlow = spec.kind === "beacon" ? 2.3 : spec.kind === "goal" ? 2 : spec.kind === "lift" ? 2.15 : 1.55;
     const lip = new THREE.Mesh(
       new THREE.BoxGeometry(spec.w + 0.05, 0.045, 0.07),
       new THREE.MeshStandardMaterial({
@@ -926,6 +1052,44 @@
         post.position.set(side * (spec.w * 0.36), spec.h + 0.45, 0);
         group.add(post);
       }
+    }
+
+    let cable = null;
+    let guide = null;
+    let pulley = null;
+    if (spec.kind === "lift") {
+      cable = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 1, 6),
+        new THREE.MeshStandardMaterial({ color: 0x8b949e, metalness: 0.78, roughness: 0.28 })
+      );
+      cable.castShadow = true;
+      cable.position.y = spec.h + 0.6;
+      group.add(cable);
+      const stripe = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.max(0.5, spec.w * 0.62), 0.035, 0.38),
+        new THREE.MeshStandardMaterial({ color: 0x58a6ff, emissive: 0x58a6ff, emissiveIntensity: 1.45, roughness: 0.28 })
+      );
+      stripe.position.set(0, spec.h + 0.025, 0.08);
+      group.add(stripe);
+
+      const travel = (spec.amp || 1.4) + 1.15;
+      const railMat = new THREE.MeshStandardMaterial({ color: 0x30363d, metalness: 0.72, roughness: 0.32 });
+      guide = new THREE.Group();
+      for (let side = -1; side <= 1; side += 2) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.045, travel, 0.045), railMat);
+        rail.position.set(side * (spec.w * 0.42), travel * 0.5 - 0.05, 0.05);
+        rail.castShadow = true;
+        guide.add(rail);
+      }
+      pulley = new THREE.Mesh(
+        new THREE.TorusGeometry(0.12, 0.022, 8, 18),
+        new THREE.MeshStandardMaterial({ color: 0x58a6ff, emissive: 0x58a6ff, emissiveIntensity: 1.7, roughness: 0.25 })
+      );
+      pulley.rotation.y = Math.PI / 2;
+      pulley.position.set(0, (spec.amp || 1.4) + 0.95, 0.05);
+      guide.add(pulley);
+      guide.position.set(spec.x, spec.baseY != null ? spec.baseY : spec.y, spec.z);
+      scene.add(guide);
     }
 
     if (spec.kind === "boost") {
@@ -990,9 +1154,13 @@
       d: spec.d,
       kind: spec.kind,
       baseX: spec.baseX != null ? spec.baseX : spec.x,
+      baseY: spec.baseY != null ? spec.baseY : spec.y,
       amp: spec.amp || 0,
       speed: spec.speed || 1,
       phase: spec.phase || 0,
+      cable: cable,
+      guide: guide,
+      pulley: pulley,
       crumbleT: null,
       falling: false,
       fallV: 0
