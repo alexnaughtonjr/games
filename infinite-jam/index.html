@@ -1,33 +1,54 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Infinite Jam - a never-ending 3D music stage your chat directs</title><link rel="icon" href="data:,">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infinite Jam · a stage your words direct</title>
+<meta name="description" content="Type a vibe on your phone. A 3D music stage changes color, motion, and groove to match. No account.">
+<meta property="og:title" content="Infinite Jam · type a vibe">
+<meta property="og:description" content="An audio-reactive 3D stage. City, ocean, fire, or anything you type. Works on a phone.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/infinite-jam/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/jam.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Infinite Jam · type a vibe">
+<meta name="twitter:description" content="An audio-reactive 3D stage. City, ocean, fire, or anything you type. Works on a phone.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/jam.png">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../shared/theme.css">
-<style>.vis{height:260px;border-radius:12px;border:1px solid var(--border);background:radial-gradient(circle at 50% 50%,#bc8cff 0,#1f6feb 18%,#07001a 45%);position:relative;overflow:hidden}
-.vis i{position:absolute;left:50%;top:50%;width:6px;border-radius:3px;background:#58a6ff;transform-origin:50% 0;animation:eq .6s ease-in-out infinite alternate}
-@keyframes eq{from{height:20px}to{height:70px}}</style></head><body><div class="wrap">
+</head>
+<body>
+<div class="wrap">
 <section class="hero">
-  <span class="pill green">audio-reactive · chat-directed · runs 24/7</span>
-  <h1>A 3D music stage that never ends,<br>and your chat directs it.</h1>
-  <p class="lead">Play your own music (mic, line-in or a track) or let the built-in groove machine jam. Viewers type a vibe like <i>"neon rain over tokyo"</i>, and the stage changes its colors, motion, particles and even the groove to match. Every few segments there's a short sponsor break.</p>
-  <div class="cta-row"><a class="btn primary big" href="stage.html">▶ Open the stage</a><span id="up"></span></div>
+  <span class="pill green">phone prompts · no install</span>
+  <h1>Type a vibe.<br>The stage becomes it.</h1>
+  <p class="lead">Open the stage, tap for sound, and send <b>neon rain over tokyo</b> from this phone. Colors, particles, city lights, and the built-in groove all follow the words. No account and no AI bill.</p>
+  <div class="cta-row">
+    <a class="btn primary big" href="stage.html">▶ Open the stage</a>
+    <a class="btn big" href="stage.html#prompt">Send a prompt</a>
+    <span id="up"></span>
+  </div>
+  <div class="cta-row" id="share"></div>
 </section>
-<div class="vis" id="vis"></div>
-<div class="grid g3" style="margin-top:16px">
-  <div class="card"><h3>🎛 Built-in groove</h3><p class="muted small">A generative beat made from pure Web Audio oscillators. No samples, no licensing. Prompts change its key, tempo and density.</p></div>
-  <div class="card"><h3>💬 Prompt queue</h3><p class="muted small">Each prompt airs for 20 seconds. Words it doesn't know still get a unique look generated from the text, so every prompt does something.</p></div>
-  <div class="card"><h3>📺 Stream mode</h3><p class="muted small">Press H to hide the UI, then capture the window in OBS for X, IG or FB lives.</p></div>
+<div class="grid g3">
+  <div class="card"><h3>Built-in groove</h3><p class="muted small">Oscillators only. Prompts can set tempo, like <b>140 bpm</b>, plus key and density.</p></div>
+  <div class="card"><h3>20 seconds each</h3><p class="muted small">Your line airs, then the next. Words it has never seen still get a unique look.</p></div>
+  <div class="card"><h3>City lights</h3><p class="muted small">Type <b>city</b> or <b>tokyo</b> and the towers come up with lit windows, not black boxes.</p></div>
 </div>
-<p class="muted small" style="margin-top:12px">Honest note: there's no AI video here. A rule-based "director" turns words into visuals, so it costs $0 to run and can stay up forever. Prompts are typed on the stage computer for now; remote chat input is on the board below.</p>
-<h2 id="sponsor">Sponsor a segment break</h2><div id="slots"></div>
+<h2 id="sponsor">Sponsor a break</h2>
+<p class="muted">Every few prompts there is a short card. DM first. Venmo @alexnaughtonjr only after we agree. This page does not charge anyone.</p>
+<div id="slots"></div>
 <h2>Open dashboard</h2><div id="stats"></div>
 <h2>Feature requests</h2><div class="card" id="board"></div>
 </div>
 <script src="../shared/lab.js"></script>
 <script>
 Lab.chrome({id:'infinite-jam', name:'Infinite Jam', icon:'🎶', nav:[['stage','stage.html']]});
-Lab.upgrade(document.getElementById('up'), {amount:5, label:'♥ Support - $5', note:'Infinite Jam'});
-const v=document.getElementById('vis'); for(let i=0;i<48;i++){ const b=document.createElement('i'); b.style.transform=`rotate(${i*7.5}deg) translateY(70px)`; b.style.animationDelay=(i%8)*.07+'s'; v.append(b); }
-Lab.sponsors(document.getElementById('slots'), {product:'Infinite Jam', base:100, mult:2, slots:3, placement:'10-second break card between segments'});
-Lab.stats(document.getElementById('stats'), {product:'infinite-jam', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Sessions','sessions'],['Prompts','prompts']], log:[['Oct 9','Stage, director, groove machine, sponsor breaks, stream mode.']]});
-Lab.board(document.getElementById('board'), {product:'Infinite Jam', seed:['Viewers send prompts from their phones (like Live Arcade)','Save a set as a shareable link','Beat-synced camera cuts','Optional AI image backdrops']});
-</script></body></html>
+Lab.mountShare(document.getElementById('share'), {title:'Infinite Jam', text:'Type a vibe. The 3D stage follows.'});
+Lab.upgrade(document.getElementById('up'), {amount:5, label:'Tip $5', note:'Infinite Jam'});
+Lab.sponsors(document.getElementById('slots'), {product:'Infinite Jam', base:100, mult:2, slots:3, placement:'Card between segments'});
+Lab.stats(document.getElementById('stats'), {product:'infinite-jam', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Sessions','sessions'],['Prompts','prompts']], log:[['Oct 10','Phone prompt bar, lit city towers, bloom, share.'],['Oct 9','Stage launched at $0.']]});
+Lab.board(document.getElementById('board'), {product:'Infinite Jam', seed:['Room code so a second phone can queue prompts','Save a set as a link','Beat-matched camera cuts']});
+</script>
+</body>
+</html>

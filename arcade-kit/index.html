@@ -1,42 +1,66 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Arcade Kit - one script tag to make your browser game pay</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arcade Kit · one script tag for your browser game</title>
+<meta name="description" content="Drop in one script. Get a local leaderboard, challenge links, a tip button, and a sponsor billboard. No backend.">
+<meta property="og:title" content="Arcade Kit · one script tag">
+<meta property="og:description" content="Scores, dare links, a Venmo tip, and a sponsor slot for any web game. MIT. No server.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/arcade-kit/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/kit.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Arcade Kit · one script tag">
+<meta name="twitter:description" content="Scores, dare links, a Venmo tip, and a sponsor slot for any web game.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/kit.png">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../shared/theme.css">
-<style>pre{background:#010409;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;font-family:var(--mono);font-size:13px;color:#c9d1d9}
-.k{color:#ff7b72}.s{color:#a5d6ff}.c{color:#8b949e}</style></head><body>
+<style>
+pre{background:#010409;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;font-family:var(--mono);font-size:13px;color:#c9d1d9}
+.k{color:#ff7b72}.s{color:#a5d6ff}.c{color:#8b949e}
+</style>
+</head>
+<body>
 <div class="wrap">
 <section class="hero">
-  <span class="pill green">v0.1 · free · MIT</span>
-  <h1>One script tag.<br>Your browser game can earn money.</h1>
-  <p class="lead">Arcade Kit adds a <b>sponsor billboard</b> you can sell, a <b>tip button</b>, a <b>local leaderboard</b>, <b>challenge links</b> that dare friends to beat your score, and a <b>"next game" ring</b> that sends players around a network of indie games. No backend and no SDK, and it works with any engine.</p>
-  <div class="cta-row"><a class="btn primary big" href="demo/">▶ Try the demo game</a><a class="btn big" href="kit.js" download>⬇ kit.js (≈6 KB)</a><span id="up"></span></div>
+  <span class="pill green">MIT · no server</span>
+  <h1>One script tag.<br>Scores, dares, a tip.</h1>
+  <p class="lead">Arcade Kit hangs a sponsor billboard, a Venmo tip, a leaderboard that stays on the player's device, and a link that dares a friend to beat a score. Play the 30-second demo, then copy the tag.</p>
+  <div class="cta-row">
+    <a class="btn primary big" href="demo/">▶ Play Orb Pop</a>
+    <a class="btn big" href="kit.js" download>Download kit.js</a>
+    <span id="up"></span>
+  </div>
+  <div class="cta-row" id="share"></div>
 </section>
-<h2>Install</h2>
-<pre><span class="c">&lt;!-- paste before &lt;/body&gt; --&gt;</span>
+<h2>Paste this</h2>
+<pre><span class="c">&lt;!-- before &lt;/body&gt; --&gt;</span>
 &lt;script src=<span class="s">"kit.js"</span>
-  data-game=<span class="s">"My Game"</span> data-venmo=<span class="s">"yourhandle"</span>
-  data-contact=<span class="s">"https://x.com/you"</span> data-ad-price=<span class="s">"100"</span>
-  data-ring=<span class="s">"https://friend1.dev/game,https://friend2.dev/game"</span>&gt;&lt;/script&gt;</pre>
-<h2>API</h2>
-<pre><span class="k">const</span> rank = ArcadeKit.submitScore(score);      <span class="c">// saves + toasts "new best" / "you beat the challenge"</span>
-ArcadeKit.challengeLink(score);                   <span class="c">// URL that dares a friend to beat it</span>
-<span class="k">new</span> THREE.CanvasTexture(ArcadeKit.billboard());  <span class="c">// "your ad here" or your sponsor, as an in-world texture</span>
-ArcadeKit.onChallenge(c =&gt; showBanner(c.name, c.score));</pre>
+  data-game=<span class="s">"My Game"</span> data-venmo=<span class="s">"alexnaughtonjr"</span>
+  data-contact=<span class="s">"https://x.com/alexnaughtonjr"</span> data-ad-price=<span class="s">"100"</span>
+  data-ring=<span class="s">"https://friend.dev/game"</span>&gt;&lt;/script&gt;</pre>
+<pre><span class="k">const</span> rank = ArcadeKit.submitScore(score);
+ArcadeKit.challengeLink(score);
+<span class="k">new</span> THREE.CanvasTexture(ArcadeKit.billboard());</pre>
+<p class="small muted">Set the canvas texture color space to sRGB in Three r152+ or the billboard washes out up close. DM a sponsor before anyone pays. The tip button opens Venmo. This page does not charge a card.</p>
 <div class="grid g3">
-  <div class="card"><h3>💸 Sell a slot</h3><p class="muted small">The billboard reads "your ad here · $X/mo" and links to your DMs. Once you close a deal, set <code>data-sponsor</code> and it switches over.</p></div>
-  <div class="card"><h3>⚔️ Challenge links</h3><p class="muted small">Your best score goes into a link. When a friend opens it, they get a dare, and a toast when they beat it. Sharing does the marketing for you.</p></div>
-  <div class="card"><h3>⟳ Game ring</h3><p class="muted small">Point <code>data-ring</code> at friends' games. Players hop between them, so everyone in the ring shares traffic.</p></div>
+  <div class="card"><h3>Sell a slot</h3><p class="muted small">The board says "your ad here" until you set <code>data-sponsor</code> after a real yes.</p></div>
+  <div class="card"><h3>Challenge links</h3><p class="muted small">A checksum in the URL. Fine for a dare between friends, not for prize money.</p></div>
+  <div class="card"><h3>Game ring</h3><p class="muted small"><code>data-ring</code> is a list of other games. Players hop. Everyone shares traffic.</p></div>
 </div>
-<p class="muted small">Honest limits: scores stay on the player's device, and challenge links have a checksum but can be faked. That's fine for friendly dares, not for prize money.</p>
 <h2>Sponsor the kit</h2><div id="slots"></div>
 <h2>Open dashboard</h2><div id="stats"></div>
 <h2>Feature requests</h2><div class="card" id="board"></div>
 </div>
 <script src="../shared/lab.js"></script>
 <script>
-Lab.chrome({id:'arcade-kit', name:'Arcade Kit', icon:'🧩', nav:[['demo','demo/'],['docs','#']]});
-Lab.upgrade(document.getElementById('up'), {amount:5, label:'♥ Support - $5', note:'Arcade Kit'});
-Lab.sponsors(document.getElementById('slots'), {product:'Arcade Kit', base:100, mult:2, slots:3, placement:'"Powered by" line on the docs + demo'});
-Lab.stats(document.getElementById('stats'), {product:'arcade-kit', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Demo visits','visits']], log:[['Oct 9','v0.1: billboard, tips, leaderboard, challenge links, game ring.']]});
-Lab.board(document.getElementById('board'), {product:'Arcade Kit', seed:['Optional global leaderboard (self-hosted)','Phaser + Godot web examples','Ring directory page']});
-</script></body></html>
+Lab.chrome({id:'arcade-kit', name:'Arcade Kit', icon:'🧩', nav:[['demo','demo/']]});
+Lab.mountShare(document.getElementById('share'), {title:'Arcade Kit', text:'One script tag for scores, dares, and a sponsor slot.'});
+Lab.upgrade(document.getElementById('up'), {amount:5, label:'Tip $5', note:'Arcade Kit'});
+Lab.sponsors(document.getElementById('slots'), {product:'Arcade Kit', base:100, mult:2, slots:3, placement:'Credit on the docs and the demo'});
+Lab.stats(document.getElementById('stats'), {product:'arcade-kit', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Demo visits','visits']], log:[['Oct 10','Orb Pop rebuilt with combos, bloom, and sound.']]});
+Lab.board(document.getElementById('board'), {product:'Arcade Kit', seed:['Phaser example','A public ring directory']});
+</script>
+</body>
+</html>

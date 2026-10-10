@@ -1,6 +1,18 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Tooth Defender (prototype)</title><link rel="icon" href="data:,">
+<title>Tooth Defender · brush for two minutes</title>
+<meta name="description" content="Scrub plaque for two minutes in a 3D mouth. Private prototype. Not a clinical tool.">
+<meta property="og:title" content="Tooth Defender">
+<meta property="og:description" content="A two-minute 3D brushing game. Private prototype.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/tooth-defender/play.html">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/tooth.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tooth Defender">
+<meta name="twitter:description" content="A two-minute 3D brushing game. Private prototype.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/tooth.png">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>html,body{height:100%;overflow:hidden;touch-action:none}canvas#c{position:fixed;inset:0;cursor:none}
 .hud{position:fixed;top:10px;left:0;right:0;display:flex;justify-content:center;gap:10px;z-index:5;font-family:var(--mono);pointer-events:none;flex-wrap:wrap}
@@ -20,8 +32,10 @@
   <div id="res"></div>
   <button class="btn primary big" id="go">▶ Start brushing</button>
 </div></div>
-<script src="../shared/vendor/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
 <script src="../shared/lab.js"></script>
+<script src="../shared/juice.js"></script>
+<script src="../shared/bloom.js"></script>
 <script>
 (() => {
 const q = new URLSearchParams(location.search);
@@ -66,7 +80,7 @@ const ray=new THREE.Raycaster(), mv=new THREE.Vector2(), plane=new THREE.Plane(n
 function pm(e){ const t=e.touches?e.touches[0]:e; mv.set(t.clientX/innerWidth*2-1,-(t.clientY/innerHeight)*2+1); ray.setFromCamera(mv,C); if(ray.ray.intersectPlane(plane,hit)) target.copy(hit); }
 addEventListener('pointermove',pm); addEventListener('touchmove',e=>{pm(e);e.preventDefault();},{passive:false}); addEventListener('touchstart',pm);
 let run=false, T=120, score=0, spawnT=0, quadI=0, lastPos=new THREE.Vector3();
-function start(){ critters.forEach(c=>S.remove(c.g)); critters.length=0; pickups.forEach(p=>S.remove(p)); pickups.length=0; teeth.forEach(t=>{t.hp=100;t.shield=0;t.m.material.color.set(0xffffff);}); run=true; T=120; score=0; $('ov').style.display='none'; Lab.track('tooth-defender','games'); }
+function start(){ critters.forEach(c=>S.remove(c.g)); critters.length=0; pickups.forEach(p=>S.remove(p)); pickups.length=0; teeth.forEach(t=>{t.hp=100;t.shield=0;t.m.material.color.set(0xffffff);}); run=true; T=120; score=0; $('ov').style.display='none'; Lab.track('tooth-defender','games'); LabFX.sfx.ui(); }
 $('go').onclick=start;
 function end(){ run=false; const avg=Math.round(teeth.reduce((a,t)=>a+t.hp,0)/N); const stars = avg>85?3:avg>60?2:1;
   const cv=document.createElement('canvas'); cv.width=800; cv.height=500; const c=cv.getContext('2d'); c.fillStyle='#0d1117'; c.fillRect(0,0,800,500); c.strokeStyle=accent; c.lineWidth=10; c.strokeRect(15,15,770,470);
@@ -75,8 +89,14 @@ function end(){ run=false; const avg=Math.round(teeth.reduce((a,t)=>a+t.hp,0)/N)
   c.fillText(practice?('from your friends at '+practice):'Tooth Defender · prototype',400,420); c.fillText(new Date().toLocaleDateString(),400,455);
   $('res').innerHTML=`<p class="mono"><b style="font-size:26px">${'⭐'.repeat(stars)}</b><br>${score} points · teeth ${avg}% healthy</p>`; const img=new Image(); img.id='cert'; img.src=cv.toDataURL(); $('res').append(img);
   const dl=Lab.h('a',{class:'btn',download:'brushing-champion.png',href:img.src,style:'margin:8px 0'},'⬇ save certificate'); $('res').append(Lab.h('div',{},dl));
-  $('go').textContent='▶ Brush again'; $('ov').style.display='flex'; }
-const clk=new THREE.Clock(); const tmp=new THREE.Vector3();
+  $('go').textContent='▶ Brush again'; $('ov').style.display='flex'; LabFX.sfx.win();
+  const box=document.createElement('div'); box.className='cta-row'; box.style.justifyContent='center';
+  Lab.mountShare(box, {title:'Tooth Defender', text:'I brushed for 2 minutes and scored '+score+' sparkle points.'});
+  $('res').append(box); }
+const clk=new THREE.Clock(); const tmp=new THREE.Vector3(); const shaker=LabFX.Shaker();
+R.outputColorSpace=THREE.SRGBColorSpace;
+const bloom=LabBloom(R,S,C,{strength:.45, threshold:.7, div:LabFX.coarse?4:2});
+addEventListener('resize', ()=>bloom.resize());
 (function loop(){ requestAnimationFrame(loop); const dt=Math.min(clk.getDelta(),.05), t=performance.now()/1000;
   brush.position.lerp(target,.35); const speed=brush.position.distanceTo(lastPos)/dt; lastPos.copy(brush.position); brush.rotation.y=Math.sin(t*20)*Math.min(.3,speed*.02);
   if(run){ T-=dt; if(T<=0){T=0; end();}
@@ -87,13 +107,13 @@ const clk=new THREE.Clock(); const tmp=new THREE.Vector3();
       if(c.arrive>=1 && c.t.shield<=0) c.t.hp=Math.max(0,c.t.hp-dt*6);
       const d=Math.hypot(brush.position.x-c.g.position.x, brush.position.z-c.g.position.z);
       if(d<1){ c.scrub+=dt*(1+Math.min(3,speed*.15)); c.body.scale.setScalar(Math.max(.2,1-c.scrub*1.6)); if(Math.random()<.4) puff(c.g.position);
-        if(c.scrub>.5){ const bonus=c.t.quad===QUADS[qn]?2:1; score+=10*bonus; S.remove(c.g); critters.splice(i,1); } } }
+        if(c.scrub>.5){ const bonus=c.t.quad===QUADS[qn]?2:1; score+=10*bonus; S.remove(c.g); critters.splice(i,1); LabFX.sfx.pop(); shaker.add(.08); } } }
     for(let i=pickups.length-1;i>=0;i--){ const p=pickups[i]; p.rotation.y+=dt*3; if(p.position.distanceTo(brush.position)<1){ if(p.userData.kind==='floss'){ score+=10*critters.length; critters.forEach(c=>{puff(c.g.position);S.remove(c.g);}); critters.length=0; Lab.toast('✨ FLOSS - all clear!',1000);} else { teeth.forEach(tt=>{ if(tt.quad===QUADS[qn]) tt.shield=8; }); Lab.toast('💧 fluoride shield!',1000);} S.remove(p); pickups.splice(i,1);} }
     const avg=Math.round(teeth.reduce((a,t)=>a+t.hp,0)/N);
     $('tm').textContent=`⏱ ${Math.floor(T/60)}:${String(Math.floor(T%60)).padStart(2,'0')}`; $('sc').textContent='⭐ '+score; $('hp').textContent='🦷 '+avg+'%';
   }
   for(let i=foam.length-1;i>=0;i--){ const f=foam[i]; f.userData.l-=dt; f.position.y+=dt*.6; f.material.opacity=f.userData.l; if(f.userData.l<=0){S.remove(f);foam.splice(i,1);} }
-  R.render(S,C); })();
+  const kick=shaker.apply(dt); C.position.x=kick.x*1.5; C.position.y=9+kick.y; C.lookAt(0,0,-.5); bloom.render(); })();
 window.__td=()=>({run,T:Math.round(T),score,critters:critters.length});
 })();
 </script></body></html>

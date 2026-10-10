@@ -1,127 +1,215 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Infinite Jam · Stage</title><link rel="icon" href="data:,">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infinite Jam · type a vibe</title>
+<meta name="description" content="An audio-reactive 3D stage. Type a vibe on your phone and the colors, city, and groove change.">
+<meta property="og:title" content="Infinite Jam · type a vibe">
+<meta property="og:description" content="A 3D music stage you steer with words. Works on a phone. No account.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/infinite-jam/stage.html">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/jam.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Infinite Jam · type a vibe">
+<meta name="twitter:description" content="A 3D music stage you steer with words. Works on a phone. No account.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/jam.png">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
-html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0;width:100%;height:100%}
-.ui{position:fixed;z-index:5}.panel{background:rgba(22,27,34,.85);border:1px solid var(--border);border-radius:10px;padding:12px;backdrop-filter:blur(6px)}
-#now{top:14px;left:14px;max-width:46vw}#now b{font-family:var(--mono);font-size:20px;display:block}
-#chat{right:14px;top:14px;bottom:14px;width:300px;display:flex;flex-direction:column}
-#q{flex:1;overflow:auto;font-family:var(--mono);font-size:13px}#q div{padding:6px 0;border-bottom:1px solid #21262d}#q .cur{color:#3fb950}
-#src{left:14px;bottom:14px;display:flex;gap:6px;flex-wrap:wrap}
-#brk{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:6;background:rgba(13,17,23,.75)}
+html,body{height:100%;overflow:hidden}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.ui{position:fixed;z-index:5}
+.panel{background:rgba(22,27,34,.88);border:1px solid var(--border);border-radius:10px;padding:12px;backdrop-filter:blur(8px)}
+#now{top:12px;left:12px;max-width:min(420px,70vw)}
+#now b{font-family:var(--mono);font-size:20px;display:block}
+#chat{right:12px;top:12px;bottom:12px;width:min(320px,92vw);display:flex;flex-direction:column;gap:6px}
+#q{flex:1;overflow:auto;font-family:var(--mono);font-size:13px;min-height:80px}
+#q div{padding:6px 0;border-bottom:1px solid #21262d}
+#q .cur{color:#3fb950}
+#composer{display:flex;gap:6px}
+#composer input,#nm{font-size:16px;min-height:44px}
+#src{left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap}
+#brk{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:6;background:rgba(13,17,23,.78)}
 .stream #chat,.stream #src{display:none}
-#start{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(13,17,23,.8)}
-@media(max-width:700px){#chat{top:auto;height:40vh;width:auto;left:14px}#now{max-width:90vw}}
-</style></head><body>
+#start{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(13,17,23,.82);padding:16px}
+@media(max-width:760px){
+  #src{top:58px;bottom:auto;left:8px;right:8px}
+  #chat{top:auto;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));width:auto;height:auto;max-height:48vh}
+  #now{max-width:calc(100% - 16px);left:8px;top:8px}
+  #q{max-height:18vh}
+}
+</style>
+</head>
+<body>
 <canvas id="c"></canvas>
-<div class="ui panel" id="now"><span class="pill green" id="mode">built-in groove</span><b id="title">warming up…</b><span class="small muted" id="by"></span></div>
+<div class="ui panel" id="now"><span class="pill green" id="mode">tap to start sound</span><b id="title">Infinite Jam</b><span class="small muted" id="by">type a vibe below</span></div>
 <div class="ui panel" id="chat">
-  <div class="mono small muted">prompt queue: describe a vibe and the stage morphs into it</div>
+  <div class="mono small muted">This phone can send prompts. Each one airs for 20 seconds.</div>
   <div id="q"></div>
-  <input id="nm" placeholder="your name" maxlength="14" style="margin:6px 0">
-  <div style="display:flex;gap:6px"><input id="pr" placeholder='e.g. "neon rain over tokyo"' maxlength="80"><button class="btn primary" id="send">↵</button></div>
-  <div class="small muted" style="margin-top:6px">try: ocean · fire · space · city · rain · love · forest · storm · gold · ice · 140 bpm</div>
+  <input id="nm" placeholder="your name" maxlength="14" enterkeyhint="next" autocomplete="nickname">
+  <form id="composer">
+    <input id="pr" placeholder="neon rain over tokyo" maxlength="80" enterkeyhint="send" autocomplete="off" aria-label="Stage prompt">
+    <button class="btn primary" id="send" type="submit">Send</button>
+  </form>
+  <div class="small muted">try city · ocean · fire · space · 120 bpm</div>
 </div>
 <div class="ui" id="src">
-  <button class="btn" id="synth">🎛 built-in groove</button>
-  <button class="btn" id="mic">🎤 mic / line-in</button>
-  <label class="btn" style="margin:0">🎵 audio file<input type="file" id="file" accept="audio/*" hidden></label>
-  <button class="btn" id="streamBtn">⛶ stream mode (H)</button>
+  <button class="btn" id="synth" type="button">built-in groove</button>
+  <button class="btn" id="mic" type="button">mic</button>
+  <label class="btn">audio file<input type="file" id="file" accept="audio/*" hidden></label>
+  <button class="btn" id="streamBtn" type="button">hide UI</button>
   <a class="btn" href="./">←</a>
 </div>
-<div id="brk"><div class="panel" style="text-align:center;max-width:460px"><div class="pill">segment break</div><h1 id="brkT" style="font-size:30px">YOUR AD HERE</h1><p class="muted" id="brkS">This 10-second break is a sponsor slot · DM @alexnaughtonjr</p></div></div>
-<div id="start"><div class="panel" style="max-width:420px;text-align:center"><h1 style="font-size:30px">INFINITE JAM</h1><p class="muted">An audio-reactive 3D stage that viewers steer with words. Click to start the sound. Browsers need a click before playing audio.</p><button class="btn primary big" id="go">▶ Start the stage</button></div></div>
-<script src="../shared/vendor/three.min.js"></script>
+<div id="brk"><div class="panel" style="text-align:center;max-width:460px"><div class="pill">break</div><h1 id="brkT" style="font-size:28px">YOUR AD HERE</h1><p class="muted" id="brkS">DM @alexnaughtonjr first. Nothing is charged here.</p></div></div>
+<div id="start"><div class="panel" style="max-width:440px;text-align:center">
+  <h1 style="font-size:32px">INFINITE JAM</h1>
+  <p class="muted">A 3D stage that follows words. Type <b>city</b> and the towers light up. Type <b>ocean</b> and it goes deep. Your phone is enough.</p>
+  <button class="btn primary big" id="go" type="button">▶ Start sound</button>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
 <script src="../shared/lab.js"></script>
+<script src="../shared/juice.js"></script>
+<script src="../shared/bloom.js"></script>
 <script src="director.js"></script>
 <script>
 (() => {
-const SPONSORS = []; // {name, tagline} once sold
+const SPONSORS = [];
 const $ = id => document.getElementById(id);
-// ---------- audio
-let actx, analyser, freq, srcNode, synth = null;
-function ensureAudio(){ if (actx) return; actx = new (window.AudioContext||window.webkitAudioContext)(); analyser = actx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = .8; freq = new Uint8Array(analyser.frequencyBinCount); analyser.connect(actx.destination); }
-function routeOut(on){ try{analyser.disconnect();}catch(e){} if(on) analyser.connect(actx.destination); }
-function stopSrc(){ if (synth) { synth.stop(); synth=null; } if (srcNode) { try{srcNode.disconnect();}catch(e){} srcNode=null; } }
-function startSynth(){ ensureAudio(); stopSrc(); routeOut(true); synth = makeSynth(actx, analyser); $('mode').textContent='built-in groove · '+bpm+' bpm'; }
-let bpm = 104;
-function makeSynth(ctx, out){
-  // tiny generative groove: kick, hat, bass, pad arps - all oscillators, no samples
-  const master = ctx.createGain(); master.gain.value = .55; master.connect(out);
-  let step = 0, next = ctx.currentTime + .05, alive = true; const scale=[0,3,5,7,10,12,15];
-  function note(f, t, d, type, g){ const o=ctx.createOscillator(), a=ctx.createGain(); o.type=type; o.frequency.value=f; a.gain.setValueAtTime(g,t); a.gain.exponentialRampToValueAtTime(.0008,t+d); o.connect(a); a.connect(master); o.start(t); o.stop(t+d+.02); }
-  function kick(t){ const o=ctx.createOscillator(), a=ctx.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+.15); a.gain.setValueAtTime(.9,t); a.gain.exponentialRampToValueAtTime(.001,t+.3); o.connect(a); a.connect(master); o.start(t); o.stop(t+.32); }
-  function hat(t){ const b=ctx.createBuffer(1, ctx.sampleRate*.05, ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); const s=ctx.createBufferSource(); s.buffer=b; const f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000; const g=ctx.createGain(); g.gain.value=.25; s.connect(f); f.connect(g); g.connect(master); s.start(t); }
-  const timer = setInterval(() => { const sp = 60/bpm/4; while (next < ctx.currentTime + .15) { const s = step%16, root = 110*Math.pow(2, Director.state.key/12);
-      if (s%4===0) kick(next); if (s%2===1) hat(next);
-      if (s%4===2 || s===15) note(root/2*Math.pow(2,scale[(step>>4)%3]/12), next, sp*1.8, 'sawtooth', .18);
-      if (Math.random() < Director.state.density) note(root*2*Math.pow(2, scale[Math.floor(Math.random()*scale.length)]/12), next, sp*3, Director.state.wave, .07);
-      next += sp; step++; } }, 25);
-  return { stop(){ alive=false; clearInterval(timer); master.disconnect(); } };
+let actx, analyser, freq, srcNode, synth = null, bpm = 104;
+function ensureAudio(){
+  if (actx) { if (actx.state==='suspended') actx.resume(); return; }
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  analyser = actx.createAnalyser(); analyser.fftSize=512; analyser.smoothingTimeConstant=.8;
+  freq = new Uint8Array(analyser.frequencyBinCount); analyser.connect(actx.destination);
 }
-$('synth').onclick = () => startSynth();
-$('mic').onclick = async () => { try { ensureAudio(); const s = await navigator.mediaDevices.getUserMedia({audio:true}); stopSrc(); srcNode = actx.createMediaStreamSource(s); srcNode.connect(analyser); routeOut(false); /* don't echo the mic back */ $('mode').textContent='live mic'; } catch(e){ Lab.toast('Mic blocked: allow it in the browser'); } };
-$('file').onchange = e => { const f = e.target.files[0]; if (!f) return; ensureAudio(); stopSrc(); routeOut(true); const a = new Audio(URL.createObjectURL(f)); a.loop = true; a.play(); srcNode = actx.createMediaElementSource(a); srcNode.connect(analyser); $('mode').textContent='track: '+f.name.slice(0,28); };
-$('go').onclick = () => { $('start').style.display='none'; startSynth(); Lab.track('infinite-jam','sessions'); };
+function routeOut(on){ try{analyser.disconnect();}catch(e){} if(on) analyser.connect(actx.destination); }
+function stopSrc(){ if (synth){ synth.stop(); synth=null; } if (srcNode){ try{srcNode.disconnect();}catch(e){} srcNode=null; } }
+function makeSynth(ctx, out){
+  const master=ctx.createGain(); master.gain.value=.5; master.connect(out);
+  let step=0, next=ctx.currentTime+.05; const scale=[0,3,5,7,10,12,15];
+  function note(f,t,d,type,g){ const o=ctx.createOscillator(), a=ctx.createGain(); o.type=type; o.frequency.value=f; a.gain.setValueAtTime(g,t); a.gain.exponentialRampToValueAtTime(.0008,t+d); o.connect(a); a.connect(master); o.start(t); o.stop(t+d+.02); }
+  function kick(t){ const o=ctx.createOscillator(), a=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(42,t+.12); a.gain.setValueAtTime(.85,t); a.gain.exponentialRampToValueAtTime(.001,t+.28); o.connect(a); a.connect(master); o.start(t); o.stop(t+.3); }
+  const timer=setInterval(()=>{ const sp=60/bpm/4; while(next<ctx.currentTime+.12){ const s=step%16, root=110*Math.pow(2, Director.state.key/12);
+    if(s%4===0) kick(next); if(s%4===2) note(root/2, next, sp*1.5, 'sawtooth', .12);
+    if(Math.random()<Director.state.density) note(root*2*Math.pow(2, scale[step%scale.length]/12), next, sp*2, Director.state.wave, .06);
+    next+=sp; step++; } }, 30);
+  return { stop(){ clearInterval(timer); master.disconnect(); } };
+}
+function startSynth(){ ensureAudio(); stopSrc(); routeOut(true); synth=makeSynth(actx, analyser); $('mode').textContent='groove · '+bpm+' bpm'; }
+$('synth').onclick=()=>startSynth();
+$('mic').onclick=async()=>{ try{ ensureAudio(); const s=await navigator.mediaDevices.getUserMedia({audio:true}); stopSrc(); srcNode=actx.createMediaStreamSource(s); srcNode.connect(analyser); routeOut(false); $('mode').textContent='live mic'; } catch(e){ Lab.toast('Mic blocked'); } };
+$('file').onchange=e=>{ const f=e.target.files[0]; if(!f) return; ensureAudio(); stopSrc(); routeOut(true); const a=new Audio(URL.createObjectURL(f)); a.loop=true; a.play(); srcNode=actx.createMediaElementSource(a); srcNode.connect(analyser); $('mode').textContent=f.name.slice(0,24); };
+$('go').onclick=()=>{ $('start').style.display='none'; startSynth(); Lab.track('infinite-jam','sessions'); LabFX.sfx.ui(); $('pr').focus(); };
 
-// ---------- 3D stage
-const R = new THREE.WebGLRenderer({canvas:$('c'), antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2));
-const S = new THREE.Scene(); S.background = new THREE.Color(0x0d1117); S.fog = new THREE.FogExp2(0x0d1117,.02); const C = new THREE.PerspectiveCamera(60,1,.1,400); C.position.set(0,0,14);
-function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
-const U = { t:{value:0}, bass:{value:0}, mid:{value:0}, high:{value:0}, c1:{value:new THREE.Color()}, c2:{value:new THREE.Color()}, spike:{value:1} };
-const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(3.2, 64), new THREE.ShaderMaterial({uniforms:U,
-  vertexShader:`uniform float t,bass,mid,high,spike; varying float vN; varying vec3 vNorm;
-  vec3 h3(vec3 p){p=fract(p*.3183+.1);p*=17.;return fract(vec3(p.x*p.y*p.z,p.x+p.y*p.z,p.x*p.y+p.z));}
-  float n3(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(h3(i).x,h3(i+vec3(1,0,0)).x,f.x),mix(h3(i+vec3(0,1,0)).x,h3(i+vec3(1,1,0)).x,f.x),f.y),mix(mix(h3(i+vec3(0,0,1)).x,h3(i+vec3(1,0,1)).x,f.x),mix(h3(i+vec3(0,1,1)).x,h3(i+vec3(1,1,1)).x,f.x),f.y),f.z);}
-  void main(){ float n=n3(normal*spike+vec3(t*.4)); float d=n*(.4+bass*1.6)+sin(position.y*3.+t*2.)*mid*.25; vN=n; vNorm=normalize(normalMatrix*normal); vec3 p=position+normal*d; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
-  fragmentShader:`uniform vec3 c1,c2; uniform float high; varying float vN; varying vec3 vNorm; void main(){ float f=pow(1.-abs(dot(vNorm,vec3(0,0,1))),2.); vec3 c=mix(c1,c2,vN)+f*(c2*1.2)+high*.25; gl_FragColor=vec4(c,1.);}`}));
+const R=new THREE.WebGLRenderer({canvas:$('c'), antialias:!LabFX.coarse, powerPreference:'high-performance'});
+R.setPixelRatio(Math.min(devicePixelRatio, LabFX.coarse?1:1.5));
+R.outputColorSpace=THREE.SRGBColorSpace;
+const S=new THREE.Scene(); S.background=new THREE.Color(0x0d1117); S.fog=new THREE.FogExp2(0x0d1117,.016);
+const C=new THREE.PerspectiveCamera(58,1,.1,400); C.position.set(0,2,16);
+S.add(new THREE.HemisphereLight(0xc5d4ff, 0x1a1024, 1.2));
+const sun=new THREE.DirectionalLight(0xfff0d0, 1.5); sun.position.set(10,18,8); S.add(sun);
+const neon=new THREE.PointLight(0x58a6ff, 20, 90); neon.position.set(0,8,6); S.add(neon);
+const warm=new THREE.PointLight(0xff7ad9, 8, 50); warm.position.set(-8,3,-4); S.add(warm);
+let bloom;
+function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); if(bloom) bloom.resize(); }
+addEventListener('resize', rs); rs();
+
+const U={ t:{value:0}, bass:{value:0}, mid:{value:0}, high:{value:0}, c1:{value:new THREE.Color()}, c2:{value:new THREE.Color()}, spike:{value:1} };
+const blob=new THREE.Mesh(new THREE.IcosahedronGeometry(3.1, LabFX.coarse?24:48), new THREE.ShaderMaterial({uniforms:U,
+  vertexShader:`uniform float t,bass,mid,spike; varying float vN; varying vec3 vNrm;
+    float h(vec3 p){ p=fract(p*vec3(.1031,.1030,.0973)); p+=dot(p,p.yzx+33.33); return fract((p.x+p.y)*p.z); }
+    float n(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+      return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z); }
+    void main(){ float k=n(normal*spike+t*.35); vN=k; vNrm=normalize(normalMatrix*normal); vec3 p=position+normal*(k*(.35+bass*1.5)+sin(position.y*3.+t*2.)*mid*.2); gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.); }`,
+  fragmentShader:`uniform vec3 c1,c2; uniform float high; varying float vN; varying vec3 vNrm;
+    void main(){ float fres=pow(1.-abs(dot(normalize(vNrm),vec3(0.,0.,1.))),1.6); vec3 c=mix(c1,c2,vN)+c2*fres*.8+high*.2; gl_FragColor=vec4(c,1.); }`
+}));
 S.add(blob);
-// frequency ring
-const BARS = 96, bars = [];
-const barMat = new THREE.MeshBasicMaterial({color:0xffffff});
-for (let i=0;i<BARS;i++){ const m=new THREE.Mesh(new THREE.BoxGeometry(.12,1,.12), new THREE.MeshBasicMaterial({color:0x58a6ff})); const a=i/BARS*Math.PI*2; m.position.set(Math.cos(a)*6.2,Math.sin(a)*6.2,0); m.rotation.z=a-Math.PI/2; S.add(m); bars.push(m); }
-// tunnel rings
-const rings=[]; for(let i=0;i<24;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(10,.04,6,64), new THREE.MeshBasicMaterial({color:0xbc8cff, transparent:true, opacity:.5})); r.position.z=-i*8; S.add(r); rings.push(r); }
-// particles (rain/stars/embers/hearts depending on director)
-const PN = 1800, pg = new THREE.BufferGeometry(), pp = new Float32Array(PN*3), pv = new Float32Array(PN);
-for (let i=0;i<PN;i++){ pp[i*3]=(Math.random()-.5)*60; pp[i*3+1]=(Math.random()-.5)*40; pp[i*3+2]=(Math.random()-.5)*60-10; pv[i]=Math.random(); }
+const BARS=64, bars=[];
+for(let i=0;i<BARS;i++){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(.16,1,.16), new THREE.MeshBasicMaterial({color:0x58a6ff, toneMapped:false}));
+  const a=i/BARS*Math.PI*2; m.position.set(Math.cos(a)*6.4, Math.sin(a)*6.4, 0); m.rotation.z=a-Math.PI/2; S.add(m); bars.push(m);
+}
+const rings=[];
+for(let i=0;i<16;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(9,.05,6,40), new THREE.MeshBasicMaterial({color:0xbc8cff, transparent:true, opacity:.55, toneMapped:false})); r.position.z=-i*8; S.add(r); rings.push(r); }
+const PN=LabFX.coarse?700:1400, pg=new THREE.BufferGeometry(), pp=new Float32Array(PN*3), pv=new Float32Array(PN);
+for(let i=0;i<PN;i++){ pp[i*3]=(Math.random()-.5)*50; pp[i*3+1]=(Math.random()-.5)*30; pp[i*3+2]=-Math.random()*40; pv[i]=Math.random(); }
 pg.setAttribute('position', new THREE.BufferAttribute(pp,3));
-const pm = new THREE.PointsMaterial({color:0xffffff, size:.12, transparent:true, opacity:.8, blending:THREE.AdditiveBlending, depthWrite:false});
+const pm=new THREE.PointsMaterial({color:0xffffff, size:LabFX.coarse?2:.12, sizeAttenuation:!LabFX.coarse, transparent:true, opacity:.85, blending:THREE.AdditiveBlending, depthWrite:false});
 S.add(new THREE.Points(pg, pm));
-// city towers (shown for city prompts)
-const city = new THREE.Group(); for(let i=0;i<70;i++){ const h=2+Math.random()*14; const m=new THREE.Mesh(new THREE.BoxGeometry(1.4,h,1.4), new THREE.MeshBasicMaterial({color:0x161b22, wireframe:Math.random()<.5})); const x=(Math.random()<.5?-1:1)*(7+Math.random()*30); m.position.set(x, -10+h/2, -12-Math.random()*40); city.add(m);} S.add(city);
 
-// ---------- director + chat queue
-const qEl = $('q'); $('nm').value = Lab.store.get('jam.name','');
-function drawQ(){ qEl.innerHTML = Director.history.slice(-30).reverse().map((p,i)=>`<div class="${i===0?'cur':''}">${i===0?'▶ ':''}${esc(p.text)} <span class="muted">· ${esc(p.by)}</span></div>`).join('') + Director.queue.map(p=>`<div class="muted">⏳ ${esc(p.text)} · ${esc(p.by)}</div>`).join(''); }
-const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function send(){ const t=$('pr').value.trim(); if(!t) return; const by=($('nm').value.trim()||'anon').slice(0,14); Lab.store.set('jam.name',by); Director.enqueue(t, by); $('pr').value=''; drawQ(); Lab.track('infinite-jam','prompts'); }
-$('send').onclick = send; $('pr').addEventListener('keydown', e => e.key==='Enter' && send());
-Director.onChange = s => { $('title').textContent = s.text; $('by').textContent = 'prompt by '+s.by+' · '+s.tags.join(', '); if (synth && s.bpm) { bpm = s.bpm; $('mode').textContent='built-in groove · '+bpm+' bpm'; } drawQ(); };
-Director.onBreak = (on, idx) => { const s = SPONSORS[idx % Math.max(1,SPONSORS.length)]; $('brk').style.display = on?'flex':'none'; $('brkT').textContent = s?s.name:'YOUR AD HERE'; $('brkS').textContent = s?(s.tagline||''):`segment-break slot ${idx%3+1} · $${[100,200,400][idx%3]}/mo · DM @alexnaughtonjr`; };
+function windowTex(){
+  const cv=document.createElement('canvas'); cv.width=64; cv.height=128; const g=cv.getContext('2d');
+  g.fillStyle='#243044'; g.fillRect(0,0,64,128);
+  const inks=['#9bd0ff','#56d364','#e2c4ff','#f0f6fc','#16304a'];
+  for(let y=4;y<124;y+=10) for(let x=4;x<60;x+=9){ g.fillStyle=inks[(x+y*3)%inks.length]; if(inks[(x+y)%5]==='#16304a' && (x+y)%3) g.fillStyle='#16304a'; g.fillRect(x,y,5,6); }
+  const t=new THREE.CanvasTexture(cv); LabFX.colorMap(t); return t;
+}
+const winTex=windowTex();
+const city=new THREE.Group();
+const cols=[0x58a6ff,0x3fb950,0xbc8cff,0xf0883e];
+for(let i=0;i<40;i++){
+  const h=8+ (i%7)*2.2;
+  const col=cols[i%cols.length];
+  const mat=new THREE.MeshStandardMaterial({map:winTex, color:0xffffff, emissive:col, emissiveMap:winTex, emissiveIntensity:1.35, roughness:.4, metalness:.15});
+  const m=new THREE.Mesh(new THREE.BoxGeometry(1.7,h,1.7), mat);
+  const side=i%2?1:-1;
+  m.position.set(side*(7+(i%6)*2.4), h/2-5, -4-(i%10)*3.4);
+  city.add(m);
+}
+S.add(city);
+bloom=LabBloom(R,S,C,{strength:.85, threshold:.42, div:LabFX.coarse?4:2});
+
+const qEl=$('q'); $('nm').value=Lab.store.get('jam.name','');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function drawQ(){
+  qEl.innerHTML=Director.history.slice(-12).reverse().map((p,i)=>'<div class="'+(i===0?'cur':'')+'">'+(i===0?'▶ ':'')+esc(p.text)+' <span class="muted">· '+esc(p.by)+'</span></div>').join('')
+    + Director.queue.map(p=>'<div class="muted">queued · '+esc(p.text)+'</div>').join('');
+}
+function sendPrompt(){
+  const t=$('pr').value.trim(); if(!t) return;
+  const by=($('nm').value.trim()||'anon').slice(0,14);
+  Lab.store.set('jam.name', by); Director.enqueue(t, by); $('pr').value=''; drawQ();
+  Lab.track('infinite-jam','prompts'); LabFX.sfx.ui(); Lab.toast('On the list');
+}
+$('composer').addEventListener('submit', e=>{ e.preventDefault(); sendPrompt(); });
+Director.onChange=s=>{ $('title').textContent=s.text; $('by').textContent='by '+s.by+' · '+s.tags.join(', '); if(synth && s.bpm){ bpm=s.bpm; $('mode').textContent='groove · '+bpm+' bpm'; } drawQ(); };
+Director.onBreak=(on,idx)=>{ const s=SPONSORS[idx%Math.max(1,SPONSORS.length)]; $('brk').style.display=on?'flex':'none'; $('brkT').textContent=s?s.name:'YOUR AD HERE'; $('brkS').textContent=s?(s.tagline||''):'DM @alexnaughtonjr first · slot is not charged on this page'; };
 Director.start();
-addEventListener('keydown', e => { if ((e.key==='h'||e.key==='H') && document.activeElement.tagName!=='INPUT') document.body.classList.toggle('stream'); });
-$('streamBtn').onclick = () => document.body.classList.toggle('stream');
+$('streamBtn').onclick=()=>document.body.classList.toggle('stream');
+addEventListener('keydown', e=>{ if((e.key==='h'||e.key==='H') && document.activeElement.tagName!=='INPUT') document.body.classList.toggle('stream'); });
+if(location.hash==='#prompt') setTimeout(()=>$('pr').focus(), 300);
 
-const clk = new THREE.Clock(); const tmpC = new THREE.Color();
-function loop(){ requestAnimationFrame(loop); const dt=Math.min(clk.getDelta(),.05); U.t.value += dt*Director.state.speed;
-  let b=0,m=0,h=0; if (analyser){ analyser.getByteFrequencyData(freq); for(let i=0;i<8;i++) b+=freq[i]; for(let i=8;i<60;i++) m+=freq[i]; for(let i=60;i<160;i++) h+=freq[i]; b/=8*255; m/=52*255; h/=100*255; }
-  U.bass.value += (b-U.bass.value)*.3; U.mid.value += (m-U.mid.value)*.3; U.high.value += (h-U.high.value)*.3;
-  const st = Director.state; U.c1.value.lerp(tmpC.set(st.c1), .03); U.c2.value.lerp(tmpC.set(st.c2), .03); U.spike.value += (st.spike-U.spike.value)*.03;
-  S.background = (S.background||new THREE.Color()).lerp(tmpC.set(st.bg), .03); S.fog = S.fog || new THREE.FogExp2(0,.02); S.fog.color.copy(S.background); S.fog.density += (st.fog-S.fog.density)*.03;
-  blob.rotation.y += dt*.2*st.speed; blob.rotation.x += dt*.07; blob.scale.setScalar(1+U.bass.value*.25);
-  bars.forEach((bar,i)=>{ const v = analyser ? freq[Math.floor(i/BARS*120)]/255 : .1; bar.scale.y = .2+v*5; bar.material.color.copy(U.c2.value).lerp(U.c1.value, i/BARS); });
-  rings.forEach(r=>{ r.position.z += dt*(6+U.bass.value*30)*st.speed; if (r.position.z>14) r.position.z -= 192; r.material.color.copy(U.c2.value); r.rotation.z += dt*.1; });
-  const pos = pg.attributes.position.array; pm.color.lerp(tmpC.set(st.pc), .05); pm.size = st.psize;
-  for (let i=0;i<PN;i++){ const k=i*3; pos[k+1] += st.pvy*dt*(1+pv[i]); pos[k] += st.pvx*dt; if (st.swirl) { const a=dt*.3*st.swirl; const x=pos[k], z=pos[k+2]+10; pos[k]=x*Math.cos(a)-z*Math.sin(a); pos[k+2]=x*Math.sin(a)+z*Math.cos(a)-10; }
-    if (pos[k+1]<-20) pos[k+1]=20; if (pos[k+1]>20) pos[k+1]=-20; if (pos[k]>30) pos[k]=-30; if (pos[k]<-30) pos[k]=30; }
-  pg.attributes.position.needsUpdate = true;
-  city.visible = st.city; city.rotation.y += dt*.03;
-  C.position.x = Math.sin(U.t.value*.2)*2; C.position.y = Math.cos(U.t.value*.15)*1.5; C.lookAt(0,0,0);
-  R.render(S,C);
+const clk=new THREE.Clock(), tmp=new THREE.Color();
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(clk.getDelta(),.05);
+  U.t.value += dt*Director.state.speed;
+  let b=0,m=0,h=0;
+  if(analyser){ analyser.getByteFrequencyData(freq); for(let i=0;i<8;i++) b+=freq[i]; for(let i=8;i<40;i++) m+=freq[i]; for(let i=40;i<100;i++) h+=freq[i]; b/=8*255; m/=32*255; h/=60*255; }
+  U.bass.value += (b-U.bass.value)*.35; U.mid.value += (m-U.mid.value)*.35; U.high.value += (h-U.high.value)*.35;
+  const st=Director.state;
+  U.c1.value.lerp(tmp.set(st.c1), .04); U.c2.value.lerp(tmp.set(st.c2), .04); U.spike.value += (st.spike-U.spike.value)*.04;
+  S.background.lerp(tmp.set(st.bg), .04); S.fog.color.copy(S.background); S.fog.density += (st.fog-S.fog.density)*.04;
+  blob.rotation.y += dt*.25*st.speed; blob.rotation.x += dt*.08; blob.scale.setScalar(1+U.bass.value*.3);
+  bars.forEach((bar,i)=>{ const v=analyser?freq[Math.floor(i/BARS*80)]/255:.15+Math.sin(U.t.value*2+i)*.08; bar.scale.y=.25+Math.max(0,v)*5.5; bar.material.color.copy(U.c2.value); });
+  rings.forEach(r=>{ r.position.z += dt*(8+U.bass.value*24)*st.speed; if(r.position.z>12) r.position.z-=128; r.material.color.copy(U.c2.value); });
+  const pos=pg.attributes.position.array; pm.color.lerp(tmp.set(st.pc), .05);
+  for(let i=0;i<PN;i++){ const k=i*3; pos[k+1]+=st.pvy*dt*(.6+pv[i]); pos[k]+=st.pvx*dt;
+    if(pos[k+1]<-18) pos[k+1]=18; if(pos[k+1]>18) pos[k+1]=-18; }
+  pg.attributes.position.needsUpdate=true;
+  city.visible=!!st.city;
+  if(st.city){ neon.intensity=26+U.bass.value*20; sun.intensity=1.8; }
+  const tx=Math.sin(U.t.value*.25)*2.4, ty=1.8+Math.cos(U.t.value*.2);
+  C.position.x += (tx-C.position.x)*(1-Math.exp(-2*dt));
+  C.position.y += (ty-C.position.y)*(1-Math.exp(-2*dt));
+  C.lookAt(0, st.city?-1:0, st.city?-10:0);
+  bloom.render();
 }
 loop();
-window.__jam = () => ({state:Director.state.text, queue:Director.queue.length, bass:+U.bass.value.toFixed(3)});
 })();
-</script></body></html>
+</script>
+</body>
+</html>

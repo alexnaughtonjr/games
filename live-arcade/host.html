@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Live Arcade · Host screen</title><link rel="icon" href="data:,">
+<title>Live Arcade · host the arena</title>
+<meta name="description" content="Host screen for Crown Rush. Phones join with a QR code and play in the 3D arena.">
+<meta property="og:title" content="Live Arcade host">
+<meta property="og:description" content="Open this on the big screen. Phones scan in and play Crown Rush.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/live-arcade/host.html">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/arcade.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Live Arcade host">
+<meta name="twitter:description" content="Open this on the big screen. Phones scan in and play Crown Rush.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/arcade.png">
+<link rel="icon" href="data:,"><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
 html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0;width:100%;height:100%}
@@ -15,6 +26,7 @@ html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0;width:100%
 .big{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;pointer-events:none;font-family:var(--mono);font-size:min(9vw,80px);font-weight:800;text-shadow:0 0 30px #bc8cff;opacity:0;transition:opacity .3s;text-align:center}
 .emo{position:fixed;font-size:34px;z-index:7;pointer-events:none;animation:up 2s ease-out forwards}@keyframes up{to{transform:translateY(-220px) scale(1.4);opacity:0}}
 .ctrl{position:fixed;bottom:12px;left:12px;z-index:5;display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:800px){.side{width:min(200px,46vw);top:auto;bottom:62px;right:8px;max-height:42vh;overflow:auto}.top b{font-size:22px}}
 </style></head><body>
 <canvas id="c"></canvas>
 <div class="top"><div class="muted small">CROWN RUSH · round</div><b id="clock">90</b><div class="small muted">hype meter: tap emojis on your phone</div><div class="hype"><div id="hype"></div></div><div class="small" id="net" style="margin-top:6px"></div></div>
@@ -25,10 +37,12 @@ html,body{height:100%;overflow:hidden}canvas#c{position:fixed;inset:0;width:100%
 </div>
 <div class="ctrl"><button class="btn" id="bots">+ 4 bots</button><button class="btn" id="newround">new round</button><a class="btn" href="./">← Live Arcade</a></div>
 <div class="big" id="big"></div>
-<script src="../shared/vendor/three.min.js"></script>
-<script src="../shared/vendor/peerjs.min.js"></script>
-<script src="../shared/vendor/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="../shared/lab.js"></script>
+<script src="../shared/juice.js"></script>
+<script src="../shared/bloom.js"></script>
 <script src="net.js"></script>
 <script>
 (() => {
@@ -42,10 +56,10 @@ const qr = qrcode(0,'M'); qr.addData(joinUrl); qr.make(); document.getElementByI
 document.getElementById('spon').innerHTML = SPONSOR ? `This round is brought to you by <b>${SPONSOR.name}</b>` : `<span class="muted">arena floor sponsor:</span> <b>your ad here</b> · $150/mo<br><a href="${Lab.LINKS.x}" target="_blank">DM @alexnaughtonjr</a>`;
 
 // --- 3D arena
-const R = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:true}); R.setPixelRatio(Math.min(devicePixelRatio,2)); R.shadowMap.enabled = true;
+const R = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:!LabFX.coarse}); R.setPixelRatio(Math.min(devicePixelRatio, LabFX.coarse?1:1.5)); R.outputColorSpace = THREE.SRGBColorSpace;
 const S = new THREE.Scene(); S.background = new THREE.Color(0x0d1117); S.fog = new THREE.Fog(0x0d1117, 45, 110);
 const C = new THREE.PerspectiveCamera(50,1,.1,300); C.position.set(0, 34, 34); C.lookAt(0,0,0);
-function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
+let bloom; function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); if (bloom) bloom.resize(); } addEventListener('resize',rs); rs();
 S.add(new THREE.HemisphereLight(0x99aaff,0x110022,.8));
 const sun = new THREE.DirectionalLight(0xffffff,1.1); sun.position.set(10,30,10); sun.castShadow = true; sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30}); S.add(sun);
 const ARENA = 20;
@@ -53,8 +67,9 @@ const ARENA = 20;
 const fc = document.createElement('canvas'); fc.width=fc.height=1024; const g = fc.getContext('2d');
 const grd = g.createRadialGradient(512,512,50,512,512,512); grd.addColorStop(0,'#1c2330'); grd.addColorStop(1,'#0d1117'); g.fillStyle=grd; g.fillRect(0,0,1024,1024);
 g.strokeStyle='rgba(88,166,255,.18)'; g.lineWidth=2; for(let i=0;i<=1024;i+=64){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,1024); g.stroke(); g.beginPath(); g.moveTo(0,i); g.lineTo(1024,i); g.stroke(); }
-g.fillStyle='rgba(230,237,243,.10)'; g.font='bold 64px JetBrains Mono, monospace'; g.textAlign='center'; g.fillText(SPONSOR?SPONSOR.name:'YOUR AD HERE', 512, 880); g.font='32px JetBrains Mono, monospace'; g.fillText(SPONSOR?(SPONSOR.tagline||''):'floor slot · DM @alexnaughtonjr', 512, 930);
-const floor = new THREE.Mesh(new THREE.CircleGeometry(ARENA, 64), new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(fc), roughness:.8})); floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; S.add(floor);
+g.fillStyle='#e6edf3'; g.font='bold 64px ui-monospace, monospace'; g.textAlign='center'; g.fillText(SPONSOR?SPONSOR.name:'YOUR AD HERE', 512, 860); g.font='32px ui-monospace, monospace'; g.fillStyle='#7ee787'; g.fillText(SPONSOR?(SPONSOR.tagline||''):'DM first · @alexnaughtonjr', 512, 920);
+const floorTex = LabFX.colorMap(new THREE.CanvasTexture(fc));
+const floor = new THREE.Mesh(new THREE.CircleGeometry(ARENA, 64), new THREE.MeshStandardMaterial({map:floorTex, roughness:.7, metalness:.05})); floor.rotation.x=-Math.PI/2; S.add(floor);
 const rim = new THREE.Mesh(new THREE.TorusGeometry(ARENA, .35, 12, 96), new THREE.MeshBasicMaterial({color:0x58a6ff})); rim.rotation.x=-Math.PI/2; S.add(rim);
 const crown = new THREE.Group();
 const zone = new THREE.Mesh(new THREE.CylinderGeometry(4,4,.2,48,1,true), new THREE.MeshBasicMaterial({color:0xd29922, transparent:true, opacity:.35, side:THREE.DoubleSide})); crown.add(zone);
@@ -62,12 +77,15 @@ const zoneBeam = new THREE.Mesh(new THREE.CylinderGeometry(4,4,14,48,1,true), ne
 const crownMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(.9,.25,64,8), new THREE.MeshStandardMaterial({color:0xd29922, emissive:0x553300, metalness:.9, roughness:.2})); crownMesh.position.y=5; crown.add(crownMesh);
 S.add(crown); let zoneR = 4;
 // pillars
-for (let i=0;i<12;i++){ const a=i/12*Math.PI*2; const p=new THREE.Mesh(new THREE.BoxGeometry(1,6+Math.random()*6,1), new THREE.MeshStandardMaterial({color:0x161b22, emissive:i%2?0x1f6feb:0x6e40c9, emissiveIntensity:.4})); p.position.set(Math.cos(a)*(ARENA+5),3,Math.sin(a)*(ARENA+5)); S.add(p); }
+for (let i=0;i<12;i++){ const a=i/12*Math.PI*2, h=9+(i%3)*2, col=i%2?0x58a6ff:0xbc8cff; const p=new THREE.Mesh(new THREE.BoxGeometry(1.15,h,1.15), new THREE.MeshStandardMaterial({color:0x1c2330, emissive:col, emissiveIntensity:1.15, roughness:.35, metalness:.25})); p.position.set(Math.cos(a)*(ARENA+5), h/2, Math.sin(a)*(ARENA+5)); S.add(p); }
+const shaker = LabFX.Shaker(); const sparks=[];
+function burst(x,z,col){ for(let i=0;i<8;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(.15,6,4), new THREE.MeshBasicMaterial({color:col, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false})); m.position.set(x,1.2,z); m.userData={v:new THREE.Vector3((Math.random()-.5)*12,5+Math.random()*6,(Math.random()-.5)*12), l:.4}; S.add(m); sparks.push(m);} }
+bloom = LabBloom(R, S, C, {strength:.7, threshold:.5, div:LabFX.coarse?4:2});
 
 // --- players
 const COLORS = [0x58a6ff,0x3fb950,0xbc8cff,0xf0883e,0xf85149,0xd29922,0x39c5cf,0xff7b72,0xa5d6ff,0x7ee787];
 const players = new Map(); let net;
-function nameSprite(name, col){ const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const c=cv.getContext('2d'); c.fillStyle='rgba(13,17,23,.7)'; c.fillRect(0,8,256,48); c.fillStyle='#'+col.toString(16).padStart(6,'0'); c.font='bold 30px JetBrains Mono, monospace'; c.textAlign='center'; c.fillText(name.slice(0,12),128,42); const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), depthTest:false})); s.scale.set(5,1.25,1); s.position.y=2.4; return s; }
+function nameSprite(name, col){ const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const c=cv.getContext('2d'); c.fillStyle='rgba(13,17,23,.75)'; c.fillRect(0,8,256,48); c.fillStyle='#'+col.toString(16).padStart(6,'0'); c.font='bold 30px ui-monospace, monospace'; c.textAlign='center'; c.fillText(name.slice(0,12),128,42); const map=LabFX.colorMap(new THREE.CanvasTexture(cv)); const s=new THREE.Sprite(new THREE.SpriteMaterial({map, depthTest:false})); s.scale.set(5,1.25,1); s.position.y=2.4; return s; }
 function addPlayer(id, name, bot){
   if (players.has(id)) return players.get(id);
   const col = COLORS[players.size % COLORS.length];
@@ -89,9 +107,9 @@ function emote(e){ const el=document.createElement('div'); el.className='emo'; e
 
 net = LANet.host(code, (m, reply) => {
   if (!m || !m.id) return;
-  if (m.t==='join') { const p = addPlayer(m.id, String(m.name||'player').slice(0,12)); p.last=performance.now(); reply({t:'hello', col:p.col}); }
+  if (m.t==='join') { const p = addPlayer(m.id, String(m.name||'player').slice(0,12)); p.last=performance.now(); reply({t:'hello', col:p.col}); LabFX.sfx.ui(); }
   const p = players.get(m.id); if (!p) return; p.last = performance.now();
-  if (m.t==='in') { p.ix = Math.max(-1,Math.min(1,+m.x||0)); p.iz = Math.max(-1,Math.min(1,+m.y||0)); if (m.dash && p.dashCd<=0) { p.vx += p.ix*22; p.vz += p.iz*22; p.dashCd = 1.2; } }
+  if (m.t==='in') { p.ix = Math.max(-1,Math.min(1,+m.x||0)); p.iz = Math.max(-1,Math.min(1,+m.y||0)); if (m.dash && p.dashCd<=0) { p.vx += p.ix*22; p.vz += p.iz*22; p.dashCd = 1.2; LabFX.sfx.boost(); shaker.add(.2); } }
   if (m.t==='emo') emote(['🔥','😂','👑','💥','❤️'].includes(m.e)?m.e:'🔥');
 }, s => { document.getElementById('net').innerHTML = s==='online' ? '<span class="pill green">online · phones can join anywhere</span>' : s==='code-taken' ? '<span class="pill red">room code taken - reload</span>' : '<span class="pill orange">local mode · join from another tab on this device</span>'; });
 
@@ -125,13 +143,18 @@ function loop(){ requestAnimationFrame(loop); const dt = Math.min(clk.getDelta()
   }
   // collisions
   const arr=[...players.values()];
-  for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){ const a=arr[i].grp.position,b=arr[j].grp.position; const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz); if(d<2&&d>0){ const nx=dx/d,nz=dz/d,push=(2-d)/2; a.x-=nx*push;a.z-=nz*push;b.x+=nx*push;b.z+=nz*push; const rel=(arr[j].vx-arr[i].vx)*nx+(arr[j].vz-arr[i].vz)*nz; if(rel<0){ arr[i].vx+=rel*nx*1.1;arr[i].vz+=rel*nz*1.1;arr[j].vx-=rel*nx*1.1;arr[j].vz-=rel*nz*1.1; } } }
+  for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){ const a=arr[i].grp.position,b=arr[j].grp.position; const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz); if(d<2&&d>0){ const nx=dx/d,nz=dz/d,push=(2-d)/2; a.x-=nx*push;a.z-=nz*push;b.x+=nx*push;b.z+=nz*push; const rel=(arr[j].vx-arr[i].vx)*nx+(arr[j].vz-arr[i].vz)*nz; if(rel<0){ arr[i].vx+=rel*nx*1.1;arr[i].vz+=rel*nz*1.1;arr[j].vx-=rel*nx*1.1;arr[j].vz-=rel*nz*1.1; if(rel<-6){ burst((a.x+b.x)/2,(a.z+b.z)/2,0x58a6ff); shaker.add(.35); LabFX.sfx.hit(); } } } }
   if (intermission<=0 && inZone.length) inZone.forEach(p => p.score += dt*10/inZone.length);
   // meteors
-  for (let i=meteors.length-1;i>=0;i--){ const m=meteors[i]; m.position.y-=dt*30; if(m.position.y<.5){ for(const p of players.values()){ const dx=p.grp.position.x-m.position.x,dz=p.grp.position.z-m.position.z,d=Math.hypot(dx,dz); if(d<5){ p.vx+=dx/(d||1)*25; p.vz+=dz/(d||1)*25; } } S.remove(m); meteors.splice(i,1);} }
+  for (let i=meteors.length-1;i>=0;i--){ const m=meteors[i]; m.position.y-=dt*30; if(m.position.y<.5){ burst(m.position.x,m.position.z,0xf0883e); shaker.add(.4); LabFX.sfx.hit(); for(const p of players.values()){ const dx=p.grp.position.x-m.position.x,dz=p.grp.position.z-m.position.z,d=Math.hypot(dx,dz); if(d<5){ p.vx+=dx/(d||1)*25; p.vz+=dz/(d||1)*25; } } S.remove(m); meteors.splice(i,1);} }
   if (Math.floor(t*4)!==loop.l){ loop.l=Math.floor(t*4); drawLb(); const sorted=arr.sort((a,b)=>b.score-a.score); sorted.forEach((p,i)=>{ if(!p.bot) net.send(p.id,{t:'state', score:Math.floor(p.score), rank:i+1, of:sorted.length, crown:inZone.includes(p), time:Math.ceil(roundT)}); }); }
-  C.position.x = Math.sin(t*.1)*6; C.lookAt(0,0,0);
-  R.render(S,C);
+  for (let i=sparks.length-1;i>=0;i--){ const s=sparks[i]; s.position.addScaledVector(s.userData.v,dt); s.userData.v.y-=18*dt; s.userData.l-=dt; s.material.opacity=Math.max(0,s.userData.l*2); if(s.userData.l<=0){ S.remove(s); sparks.splice(i,1);} }
+  const kick=shaker.apply(dt);
+  const ox=Math.sin(t*.12)*7+kick.x*6, oz=34+kick.y*4;
+  C.position.x += (ox-C.position.x)*(1-Math.exp(-2.2*dt));
+  C.position.z += (oz-C.position.z)*(1-Math.exp(-2.2*dt));
+  C.lookAt(0,0,0);
+  bloom.render();
 }
 loop();
 window.__host = () => ({players:players.size, round:Math.ceil(roundT), scores:[...players.values()].map(p=>[p.name,Math.floor(p.score)])});

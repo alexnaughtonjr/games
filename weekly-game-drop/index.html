@@ -1,75 +1,86 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Weekly Game Drop - a free 3D browser game every week</title>
-<meta name="description" content="A free, instant-play 3D browser game every week by Alexander Haislip. No install, no account.">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weekly Game Drop · a free 3D game every week</title>
+<meta name="description" content="Neon Drift is this week's free 3D browser race. Same course for everyone today. No install, no account.">
+<meta property="og:title" content="Weekly Game Drop · Neon Drift">
+<meta property="og:description" content="A free 3D hover-bike race. Same daily course for every player. Race your own ghost.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/weekly-game-drop/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/drift.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Weekly Game Drop · Neon Drift">
+<meta name="twitter:description" content="A free 3D hover-bike race. Same daily course for every player. Race your own ghost.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/drift.png">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
-.drop{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:center}
-.preview{aspect-ratio:16/10;border-radius:12px;border:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#ff7a59 0,#7a1a6b 30%,#0d0618 65%);position:relative}
-.preview .grid3{position:absolute;inset:55% -40% -10% -40%;background-image:linear-gradient(#bc8cff 1px,transparent 1px),linear-gradient(90deg,#58a6ff 1px,transparent 1px);background-size:40px 40px;transform:perspective(300px) rotateX(60deg);animation:scroll 1.2s linear infinite;opacity:.7}
-@keyframes scroll{to{background-position:0 40px}}
-.preview .t{position:absolute;left:18px;bottom:14px;font-family:var(--mono);font-weight:800;font-size:30px;text-shadow:0 0 20px #bc8cff}
-.poll button{width:100%;text-align:left;justify-content:space-between;margin:6px 0}
-.bar{height:4px;background:var(--green);border-radius:4px;margin-top:4px}
+.drop{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:center}
+.preview{display:block;aspect-ratio:16/10;border-radius:12px;border:1px solid var(--border);overflow:hidden;background:radial-gradient(ellipse at 50% 24%,#ff7a59 0,#7a1a6b 28%,#0d0618 62%);position:relative}
+.preview .g{position:absolute;inset:52% -20% -20%;background-image:linear-gradient(#bc8cff 1px,transparent 1px),linear-gradient(90deg,#58a6ff 1px,transparent 1px);background-size:36px 36px;transform:perspective(280px) rotateX(62deg);animation:sc 1.1s linear infinite}
+@keyframes sc{to{background-position:0 36px}}
+.preview .t{position:absolute;left:16px;bottom:12px;font-family:var(--mono);font-weight:800;font-size:28px;text-shadow:0 0 18px #bc8cff}
 @media(max-width:760px){.drop{grid-template-columns:1fr}}
-</style></head><body>
+</style>
+</head>
+<body>
 <div class="wrap">
-  <section class="hero">
-    <span class="pill green">drop #1 is live · new game every week</span>
-    <h1>A free 3D game in your browser.<br>Every week.</h1>
-    <p class="lead">I build a small, polished game in plain HTML + Three.js each week. Click and you're playing in two seconds: no install, no account, no app store. Sponsors keep it free.</p>
-  </section>
-
-  <section class="drop card">
-    <a href="neon-drift/" class="preview" aria-label="Play Neon Drift"><div class="grid3"></div><div class="t">NEON DRIFT</div></a>
-    <div>
-      <div class="pill blue">this week</div>
-      <h2 style="margin-top:8px">Neon Drift</h2>
-      <p class="muted">Synthwave hover-bike racer. A <b>daily course</b> that is identical for every player, combo orbs, boost pads, and a <b>ghost of your best run</b> to race against.</p>
-      <div class="cta-row"><a class="btn primary big" href="neon-drift/">▶ Play now</a><span id="up"></span></div>
-      <p class="small muted">Works on phones too: hold the left or right side to steer.</p>
+<section class="hero">
+  <span class="pill green">drop #1 is live</span>
+  <h1>A free 3D game.<br>This week: Neon Drift.</h1>
+  <p class="lead">Click and you are on a synthwave highway in two seconds. Everyone gets the same course today, and your best run comes back as a ghost. No install and no account.</p>
+</section>
+<section class="drop card">
+  <a class="preview" href="neon-drift/" aria-label="Play Neon Drift"><div class="g"></div><div class="t">NEON DRIFT</div></a>
+  <div>
+    <div class="pill blue">this week</div>
+    <h2 style="margin-top:8px">Play the daily course</h2>
+    <p class="muted">Steer, chain orbs for combos, boost on green pads, and don't eat the red walls. Phones: hold the sides, or use the on-screen buttons.</p>
+    <div class="cta-row">
+      <a class="btn primary big" href="neon-drift/">▶ Play now</a>
+      <span id="up"></span>
     </div>
-  </section>
-
-  <h2>Archive</h2>
-  <div class="grid g3">
-    <a class="card" href="neon-drift/"><span class="pill green">#1 · this week</span><h3>Neon Drift</h3><p class="muted small">Daily-seed racer with a ghost replay.</p></a>
-    <a class="card" href="../vibe-coder/"><span class="pill">earlier</span><h3>Vibe Coder</h3><p class="muted small">Ship before the coffee dies. A 3D prompt-combo desk game.</p></a>
-    <a class="card" href="../rainline/"><span class="pill">earlier</span><h3>Rainline</h3><p class="muted small">Neon rain, stick combat, grapple and glide.</p></a>
+    <div class="cta-row" id="share"></div>
   </div>
-
-  <h2>Vote: what should next week's drop be?</h2>
-  <div class="card poll" id="poll"></div>
-
-  <h2 id="sponsor">Sponsor the billboards</h2>
-  <p class="muted">Every drop has in-world billboards that players fly past. One sponsor per slot, shown in every game for the month.</p>
-  <div id="slots"></div>
-
-  <h2>Open dashboard</h2>
-  <div id="stats"></div>
-
-  <h2>Feature requests</h2>
-  <div class="card" id="board"></div>
+</section>
+<h2>Archive</h2>
+<div class="grid g3">
+  <a class="card" href="neon-drift/"><span class="pill green">#1 · this week</span><h3>Neon Drift</h3><p class="muted small">Daily-seed racer with a ghost.</p></a>
+  <a class="card" href="../vibe-coder/"><span class="pill">earlier</span><h3>Vibe Coder</h3><p class="muted small">Ship before the coffee dies.</p></a>
+  <a class="card" href="../rainline/"><span class="pill">earlier</span><h3>Rainline</h3><p class="muted small">Neon rain and stick combat.</p></a>
+</div>
+<h2>Vote on next week</h2>
+<div class="card poll" id="poll"></div>
+<h2 id="sponsor">Sponsor a billboard</h2>
+<p class="muted">Boards sit in the world. DM first so we agree what it says. Then Venmo @alexnaughtonjr. Nothing on this page charges a card.</p>
+<div id="slots"></div>
+<h2>Open dashboard</h2>
+<div id="stats"></div>
+<h2>Feature requests</h2>
+<div class="card" id="board"></div>
 </div>
 <script src="../shared/lab.js"></script>
 <script>
 Lab.chrome({id:'weekly-game-drop', name:'Weekly Game Drop', icon:'🎮', tag:'drop #1 live', nav:[['play','neon-drift/'],['sponsor','#sponsor']]});
-Lab.upgrade(document.getElementById('up'), {amount:3, label:'☕ Tip $3', note:'Weekly Game Drop tip'});
-Lab.sponsors(document.getElementById('slots'), {product:'Weekly Game Drop', base:250, mult:2, slots:4, sold:[], placement:'Billboard in every weekly game'});
+Lab.mountShare(document.getElementById('share'), {title:'Neon Drift', text:'Free 3D race. Same course for everyone today:'});
+Lab.upgrade(document.getElementById('up'), {amount:3, label:'Tip $3', note:'Weekly Game Drop tip'});
+Lab.sponsors(document.getElementById('slots'), {product:'Weekly Game Drop', base:250, mult:2, slots:4, sold:[], placement:'Billboard inside Neon Drift'});
 Lab.stats(document.getElementById('stats'), {product:'weekly-game-drop', public:{mrr:0, sponsors:0, launched:'2026-10-09', history:[{l:'Oct',v:0}]},
   local:[['Plays','plays']],
-  log:[['Oct 9','Drop #1 Neon Drift: daily seed, ghost replay, sponsor billboards.'],['Oct 9','Launched this page with open numbers - starts at $0.']]});
-Lab.board(document.getElementById('board'), {product:'Weekly Game Drop', seed:['Global daily leaderboard','Gamepad support','Multiplayer race mode','Custom bike colors']});
-// poll (local vote + public tally via GitHub issue)
+  log:[['Oct 10','Rebuilt Neon Drift: bloom, sound, mobile steer, shareable daily score.'],['Oct 9','Drop #1 launched at $0.']]});
+Lab.board(document.getElementById('board'), {product:'Weekly Game Drop', seed:['Global daily leaderboard','Gamepad support','A second track next week']});
 (function(){
-  const opts = ['Kart battle arena','Tiny city builder','Rhythm runner (music-synced)','Co-op space salvage'];
+  const opts = ['Kart battle arena','Tiny city builder','Rhythm runner','Co-op space salvage'];
   const el = document.getElementById('poll'); let v = Lab.store.get('wgd.vote', null);
   function draw(){ el.innerHTML='';
-    opts.forEach((o,i)=>{ const b = Lab.h('button',{class:'btn'+(v===i?' primary':''),onclick:()=>{v=i;Lab.store.set('wgd.vote',i);draw();Lab.toast('Saved. Count it publicly with the link below.');}}, o, v===i?'✓ your vote':'');
+    opts.forEach((o,i)=>{ const b = Lab.h('button',{class:'btn'+(v===i?' primary':''), style:'width:100%;justify-content:space-between;margin:6px 0'}, o, v===i?' · your vote':'');
+      b.onclick=()=>{ v=i; Lab.store.set('wgd.vote', i); draw(); Lab.toast('Saved on this device.'); };
       el.append(b); });
-    if (v!=null) el.append(Lab.h('p',{class:'small'}, Lab.h('a',{target:'_blank',rel:'noopener',href:Lab.LINKS.issues+'?title='+encodeURIComponent('[Weekly Game Drop vote] '+opts[v])},'Make it count: +1 on GitHub →')));
+    if (v!=null) el.append(Lab.h('p',{class:'small'}, Lab.h('a',{target:'_blank',rel:'noopener',href:Lab.LINKS.issues+'?title='+encodeURIComponent('[Weekly Game Drop vote] '+opts[v])},'Count it on GitHub')));
   } draw();
 })();
 </script>
-</body></html>
+</body>
+</html>

@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Podcast to Playable - turn any episode into quote cards + a playable 3D quiz</title><link rel="icon" href="data:,">
+<title>Podcast to Playable · a transcript becomes a quiz</title>
+<meta name="description" content="Paste a transcript. Get quote cards, chapters, and a 3D quiz packed into one link. Nothing is uploaded.">
+<meta property="og:title" content="Podcast → Playable">
+<meta property="og:description" content="Paste a transcript. Share a 3D quiz. The text never leaves your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/podcast-to-playable/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/podcast.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Podcast → Playable">
+<meta name="twitter:description" content="Paste a transcript. Share a 3D quiz. The text never leaves your browser.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/podcast.png">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../shared/theme.css">
 <style>textarea{min-height:200px;font-family:var(--mono);font-size:13px}
 .qc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.qc figure{margin:0}.qc canvas{width:100%;border-radius:10px;border:1px solid var(--border);display:block}
@@ -19,7 +30,8 @@
     <button class="btn" id="sample">try a sample episode</button>
   </div>
   <textarea id="tx" placeholder="Paste a transcript. 'Name: line' speaker labels and [mm:ss] timestamps make it even better."></textarea>
-  <div class="cta-row"><button class="btn primary big" id="go">⚡ Make it playable</button><span class="muted small" id="cnt"></span></div>
+  <div class="cta-row"><button class="btn primary big" id="go">Make it playable</button><span class="muted small" id="cnt"></span></div>
+  <div class="cta-row" id="share"></div>
 </div>
 <div class="out" id="out">
   <h2>🎮 Your episode game</h2>
@@ -44,7 +56,8 @@
 <script src="../shared/lab.js"></script>
 <script src="engine.js"></script>
 <script>
-Lab.chrome({id:'podcast-to-playable', name:'Podcast → Playable', icon:'🎙', nav:[['make','#']]});
+Lab.chrome({id:'podcast-to-playable', name:'Podcast → Playable', icon:'🎙'});
+Lab.mountShare(document.getElementById('share'), {title:'Podcast to Playable', text:'Turn a transcript into a 3D quiz link.'});
 Lab.upgrade(document.getElementById('up'), {amount:5, label:'♥ Back it - $5', note:'Podcast to Playable'});
 Lab.sponsors(document.getElementById('slots'), {product:'Podcast to Playable', base:75, mult:2, slots:3, placement:'"Quiz presented by" on every shared game'});
 Lab.stats(document.getElementById('stats'), {product:'podcast-to-playable', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Episodes made','made']], log:[['Oct 9','v1: quote scoring, cards, chapters, link-packed 3D quiz.']]});
