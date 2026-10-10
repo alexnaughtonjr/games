@@ -40,7 +40,7 @@
         <li>Striped lifts carry you up and down. Cyan gust vents shove the lamp sideways in midair.</li>
         <li>Land on a blue beacon and a later fall puts you back there. Red sweep beams count as a fall too.</li>
         <li>With no beacon yet, a miss ends the run. <kbd>R</kbd> starts another shaft. The dish at the top is the relay.</li>
-        <li><kbd>P</kbd> or <kbd>Esc</kbd> pauses. On a touch screen, use the buttons along the bottom.</li>
+        <li><kbd>P</kbd> or <kbd>Esc</kbd> pauses. On a touch screen, drag the stick to steer and tap Jump. The camera leads the jump.</li>
       </ul>
       <button id="start" type="button">Start the climb</button>
       <p id="titleBest" class="credit">Best score saves in this browser.</p>
@@ -63,9 +63,10 @@
   </section>
 
   <div id="touch" aria-hidden="true">
-    <button id="btnLeft" type="button">Left</button>
+    <div id="stick" role="slider" aria-label="Move" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
+      <span id="nub"></span>
+    </div>
     <button id="btnJump" class="jump" type="button">Jump</button>
-    <button id="btnRight" type="button">Right</button>
   </div>
 
   <section id="end" class="overlay hidden">

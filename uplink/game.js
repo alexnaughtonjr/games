@@ -30,6 +30,7 @@
   const keys = new Set();
   let jumpEdge = false;
   let jumpRelease = false;
+  const stick = { active: false, x: 0, pointer: null };
   let best = readBest();
 
   const state = {
@@ -159,9 +160,8 @@
     $("restart").blur();
     restart();
   });
-  bindHold("btnLeft", "KeyA");
-  bindHold("btnRight", "KeyD");
   bindHold("btnJump", "Space");
+  bindStick();
   paintBest();
 
   window.addEventListener("keydown", (e) => {
@@ -272,6 +272,46 @@
     el.addEventListener("pointerdown", press);
     el.addEventListener("pointerup", release);
     el.addEventListener("pointercancel", release);
+  }
+
+  function bindStick() {
+    const pad = $("stick");
+    const nub = $("nub");
+    const place = (e) => {
+      const rect = pad.getBoundingClientRect();
+      const max = rect.width * 0.34;
+      const dx = e.clientX - (rect.left + rect.width / 2);
+      const dy = e.clientY - (rect.top + rect.height / 2);
+      const cx = Math.max(-max, Math.min(max, dx));
+      const cy = Math.max(-max, Math.min(max, dy));
+      stick.x = max > 0 ? cx / max : 0;
+      pad.setAttribute("aria-valuenow", stick.x.toFixed(2));
+      nub.style.transform = "translate(" + cx.toFixed(1) + "px, " + cy.toFixed(1) + "px)";
+    };
+    const end = (e) => {
+      if (stick.pointer != null && e.pointerId !== stick.pointer) return;
+      stick.active = false;
+      stick.x = 0;
+      stick.pointer = null;
+      pad.setAttribute("aria-valuenow", "0");
+      nub.style.transform = "translate(0px, 0px)";
+    };
+    pad.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      stick.active = true;
+      stick.pointer = e.pointerId;
+      if (pad.setPointerCapture) {
+        try { pad.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
+      }
+      place(e);
+    });
+    pad.addEventListener("pointermove", (e) => {
+      if (!stick.active || e.pointerId !== stick.pointer) return;
+      e.preventDefault();
+      place(e);
+    });
+    pad.addEventListener("pointerup", end);
+    pad.addEventListener("pointercancel", end);
   }
 
   function readBest() {
@@ -407,7 +447,8 @@
   function stepPlayer(dt) {
     const left = keys.has("KeyA") || keys.has("ArrowLeft");
     const right = keys.has("KeyD") || keys.has("ArrowRight");
-    const dir = (right ? 1 : 0) - (left ? 1 : 0);
+    let dir = (right ? 1 : 0) - (left ? 1 : 0);
+    if (stick.active && Math.abs(stick.x) > 0.08) dir = stick.x;
     const desired = dir * MOVE_SPEED;
     player.vx += (desired - player.vx) * Math.min(1, dt * 9);
     applyGusts(dt);
@@ -524,21 +565,26 @@
 
   function updateCamera(dt) {
     const sway = state.mode === "title" ? Math.sin(state.time * 0.35) * 0.85 : 0;
-    const destX = player.x * 0.32 + sway;
-    const destY = player.y + 2.55;
-    const destZ = 8.5;
-    const k = 1 - Math.exp(-4.2 * dt);
+    const live = state.mode === "run";
+    const rise = live ? THREE.MathUtils.clamp(player.vy * 0.16, -1.25, 1.7) : 0;
+    const leadX = live ? player.vx * 0.14 : 0;
+    const destX = player.x * 0.36 + leadX + sway;
+    const destY = player.y + 2.35 + rise;
+    const destZ = 8.15 + Math.min(1.15, Math.abs(player.vx) * 0.08);
+    const k = 1 - Math.exp(-4.6 * dt);
     const jolt = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
     state.shake = Math.max(0, state.shake - dt * 0.7);
     camera.position.x += (destX - camera.position.x) * k + jolt;
     camera.position.y += (destY - camera.position.y) * k;
     camera.position.z += (destZ - camera.position.z) * k;
-    camera.lookAt(player.x * 0.18, player.y + 1.05, -0.4);
+    camera.lookAt(player.x * 0.2 + leadX * 0.35, player.y + 1.15 + rise * 0.72, -0.4);
+    const roll = live ? THREE.MathUtils.clamp(-player.vx * 0.012, -0.08, 0.08) : 0;
+    if (roll) camera.rotateZ(roll);
   }
 
   function snapCamera() {
-    camera.position.set(player.x * 0.32, player.y + 2.55, 8.5);
-    camera.lookAt(player.x * 0.18, player.y + 1.05, -0.4);
+    camera.position.set(player.x * 0.36, player.y + 2.35, 8.15);
+    camera.lookAt(player.x * 0.2, player.y + 1.15, -0.4);
   }
 
   function updateHud() {
