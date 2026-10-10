@@ -70,11 +70,12 @@ Then visit `http://localhost:8080/rainline/`. The on-screen card lists every con
 
 `uplink/index.html`
 
-Free custom game for Alexander Haislip. Climb a dark 3D relay shaft as a courier lamp. Each run builds a new stair up to a relay dish. Boost pads launch you, red lips crumble, slabs slide, and sweep beams guard the upper shaft. Blue beacons save a checkpoint. Miss a ledge before the first beacon and the run ends.
+Free custom game for Alexander Haislip. Climb a dark 3D relay shaft as a courier lamp. Each run builds a new stair up to a relay dish. Boost pads launch you, red lips crumble, blue slabs slide, striped lifts ride, and cyan gust vents shove the lamp sideways. Green rings take a grapple zip. Sweep beams guard the upper shaft. Blue beacons save a checkpoint. Miss a ledge before the first beacon and the run ends.
 
-WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.min.js`, so play does not call a CDN and there is no build step.
+WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.min.js`, and bloom is `shared/bloom.js`. Play does not call a CDN and there is no build step. The shaft uses a soft shadow and neon bloom. Green bulbs on the left rail light up to the best height of the run.
 
-- `A` `D` or the arrow keys move. `Space`, `W`, or `Up` jumps. Touch screens use the buttons along the bottom.
+- `A` `D` or the arrow keys move. `Space`, `W`, or `Up` jumps. On a touch screen, drag the stick, then tap Jump or Hook.
+- `Q` zips to a green ring in reach. The line cools down before the next zip. The camera leads the jump.
 - `P` or `Esc` pauses. Blue beacons save a checkpoint. The best score stays in this browser (`games.uplink.best`).
 - Open `uplink/index.html` directly, or visit it from the collection.
 

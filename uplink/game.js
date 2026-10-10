@@ -78,6 +78,7 @@
   let ringLife = 0;
   const pulseRings = [];
   const sconces = [];
+  const progressLamps = [];
   let sconceBlue = null;
   let sconceGreen = null;
   const sparkVel = new Float32Array(56 * 3);
@@ -138,6 +139,7 @@
   scene.add(greenWash);
 
   buildShaft();
+  buildProgress();
   buildSconces();
   buildAtmosphere();
   buildCourier();
@@ -448,6 +450,7 @@
     if (state.mode === "run") stepPlayer(dt);
     else if (state.mode === "title") idleCourier();
     followKeyLight();
+    updateProgress();
     updateCamera(dt);
     updateHud();
     if (bloom) bloom.render();
@@ -1586,6 +1589,33 @@
     floor.position.set(0, -0.55, -0.2);
     floor.receiveShadow = true;
     scene.add(floor);
+  }
+
+  function buildProgress() {
+    for (let y = 4; y <= 100; y += 3.5) {
+      const lamp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 10, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x21262d,
+          emissive: 0x161b22,
+          emissiveIntensity: 0.2,
+          roughness: 0.28
+        })
+      );
+      lamp.position.set(-3.68, y, 1.12);
+      scene.add(lamp);
+      progressLamps.push(lamp);
+    }
+  }
+
+  function updateProgress() {
+    for (let i = 0; i < progressLamps.length; i++) {
+      const lamp = progressLamps[i];
+      const on = lamp.position.y <= state.maxY + 0.2;
+      lamp.material.color.setHex(on ? 0x3fb950 : 0x21262d);
+      lamp.material.emissive.setHex(on ? 0x238636 : 0x161b22);
+      lamp.material.emissiveIntensity = on ? 2.35 : 0.16;
+    }
   }
 
   function buildSconces() {
