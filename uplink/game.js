@@ -30,6 +30,7 @@
   const keys = new Set();
   let jumpEdge = false;
   let jumpRelease = false;
+  const stick = { active: false, x: 0, pointer: null };
   let best = readBest();
 
   const state = {
@@ -62,6 +63,12 @@
   const platforms = [];
   const cores = [];
   const lasers = [];
+  const gusts = [];
+  const grapples = [];
+  const grapple = { active: false, t: 0, cd: 0, target: null, beam: null };
+  let grappleEdge = false;
+  const beamUp = new THREE.Vector3(0, 1, 0);
+  const beamDir = new THREE.Vector3();
   const coreWorld = new THREE.Vector3();
   let goalBulb = null;
   let dustGeo = null;
@@ -70,6 +77,10 @@
   let jumpRing = null;
   let ringLife = 0;
   const pulseRings = [];
+  const sconces = [];
+  const progressLamps = [];
+  let sconceBlue = null;
+  let sconceGreen = null;
   const sparkVel = new Float32Array(56 * 3);
   const sparkLife = new Float32Array(56);
 
@@ -90,7 +101,9 @@
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setClearColor(0x0d1117, 1);
 
   const scene = new THREE.Scene();
@@ -100,10 +113,21 @@
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 80);
   camera.position.set(0, 3.2, 8.6);
 
-  scene.add(new THREE.HemisphereLight(0x9aa4b2, 0x0d1117, 0.42));
-  const key = new THREE.DirectionalLight(0xe6edf3, 1.35);
+  scene.add(new THREE.HemisphereLight(0x9aa4b2, 0x0d1117, 0.38));
+  const key = new THREE.DirectionalLight(0xe6edf3, 1.55);
   key.position.set(2.4, 12, 7);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.near = 0.5;
+  key.shadow.camera.far = 26;
+  key.shadow.camera.left = -7.5;
+  key.shadow.camera.right = 7.5;
+  key.shadow.camera.top = 9;
+  key.shadow.camera.bottom = -9;
+  key.shadow.bias = -0.00035;
+  key.shadow.normalBias = 0.03;
   scene.add(key);
+  scene.add(key.target);
   const fill = new THREE.PointLight(0x8b949e, 18, 28, 2);
   fill.position.set(0, 4, 6);
   scene.add(fill);
@@ -115,8 +139,11 @@
   scene.add(greenWash);
 
   buildShaft();
+  buildProgress();
+  buildSconces();
   buildAtmosphere();
   buildCourier();
+  buildGrappleBeam();
   buildCourse((Math.random() * 0x7fffffff) >>> 0);
   placeCourier(platforms[0]);
   snapCamera();
@@ -141,9 +168,12 @@
     $("restart").blur();
     restart();
   });
-  bindHold("btnLeft", "KeyA");
-  bindHold("btnRight", "KeyD");
   bindHold("btnJump", "Space");
+  bindStick();
+  $("btnGrapple").addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (state.mode === "run") grappleEdge = true;
+  });
   paintBest();
 
   window.addEventListener("keydown", (e) => {
@@ -152,6 +182,10 @@
       e.code === "ArrowLeft" || e.code === "ArrowRight";
     if (move) e.preventDefault();
     if (e.repeat) return;
+    if (e.code === "KeyQ" && state.mode === "run") {
+      e.preventDefault();
+      grappleEdge = true;
+    }
     if (state.mode === "title" && (e.code === "Enter" || e.code === "Space")) {
       startRun();
       return;
@@ -178,6 +212,20 @@
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") jumpRelease = true;
   });
 
+  let bloom = null;
+  try {
+    if (window.LabBloom) {
+      const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      bloom = window.LabBloom(renderer, scene, camera, {
+        threshold: 0.6,
+        strength: 0.62,
+        div: coarse ? 4 : 2
+      });
+    }
+  } catch (err) {
+    bloom = null;
+  }
+
   window.addEventListener("resize", resize);
   resize();
 
@@ -193,6 +241,7 @@
     state.checkpoint = null;
     state.slips = 0;
     player.invuln = 0;
+    resetGrapple();
     placeCourier(platforms[0]);
     $("title").classList.add("hidden");
     $("end").classList.add("hidden");
@@ -242,6 +291,46 @@
     el.addEventListener("pointercancel", release);
   }
 
+  function bindStick() {
+    const pad = $("stick");
+    const nub = $("nub");
+    const place = (e) => {
+      const rect = pad.getBoundingClientRect();
+      const max = rect.width * 0.34;
+      const dx = e.clientX - (rect.left + rect.width / 2);
+      const dy = e.clientY - (rect.top + rect.height / 2);
+      const cx = Math.max(-max, Math.min(max, dx));
+      const cy = Math.max(-max, Math.min(max, dy));
+      stick.x = max > 0 ? cx / max : 0;
+      pad.setAttribute("aria-valuenow", stick.x.toFixed(2));
+      nub.style.transform = "translate(" + cx.toFixed(1) + "px, " + cy.toFixed(1) + "px)";
+    };
+    const end = (e) => {
+      if (stick.pointer != null && e.pointerId !== stick.pointer) return;
+      stick.active = false;
+      stick.x = 0;
+      stick.pointer = null;
+      pad.setAttribute("aria-valuenow", "0");
+      nub.style.transform = "translate(0px, 0px)";
+    };
+    pad.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      stick.active = true;
+      stick.pointer = e.pointerId;
+      if (pad.setPointerCapture) {
+        try { pad.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
+      }
+      place(e);
+    });
+    pad.addEventListener("pointermove", (e) => {
+      if (!stick.active || e.pointerId !== stick.pointer) return;
+      e.preventDefault();
+      place(e);
+    });
+    pad.addEventListener("pointerup", end);
+    pad.addEventListener("pointercancel", end);
+  }
+
   function readBest() {
     try {
       const n = Number(localStorage.getItem(HIGH_KEY));
@@ -279,6 +368,7 @@
 
   function finish(won) {
     if (state.mode !== "run") return;
+    resetGrapple();
     state.mode = won ? "win" : "over";
     $("hint").hidden = true;
     $("endEyebrow").textContent = won ? "relay lit" : "signal lost";
@@ -297,6 +387,7 @@
   function failOrRespawn() {
     if (state.checkpoint) {
       state.slips += 1;
+      resetGrapple();
       placeCourier(state.checkpoint);
       state.floorY = player.y;
       player.invuln = 1.1;
@@ -335,6 +426,13 @@
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
+    if (bloom) bloom.resize();
+  }
+
+  function followKeyLight() {
+    key.position.set(player.x * 0.3 + 2.2, player.y + 8.4, 6.5);
+    key.target.position.set(player.x * 0.22, player.y + 0.45, -0.35);
+    key.target.updateMatrixWorld();
   }
 
   function frame() {
@@ -343,15 +441,20 @@
     if (state.mode !== "pause") {
       spinCores(dt);
       updatePlatforms(dt);
+      updateGusts(dt);
+      updateGrapples(dt);
       updateAtmosphere(dt);
       updateLasers();
       if (goalBulb) goalBulb.material.emissiveIntensity = 1.7 + Math.sin(state.time * 3.2) * 0.7;
     }
     if (state.mode === "run") stepPlayer(dt);
     else if (state.mode === "title") idleCourier();
+    followKeyLight();
+    updateProgress();
     updateCamera(dt);
     updateHud();
-    renderer.render(scene, camera);
+    if (bloom) bloom.render();
+    else renderer.render(scene, camera);
   }
 
   function idleCourier() {
@@ -365,9 +468,11 @@
   function stepPlayer(dt) {
     const left = keys.has("KeyA") || keys.has("ArrowLeft");
     const right = keys.has("KeyD") || keys.has("ArrowRight");
-    const dir = (right ? 1 : 0) - (left ? 1 : 0);
+    let dir = (right ? 1 : 0) - (left ? 1 : 0);
+    if (stick.active && Math.abs(stick.x) > 0.08) dir = stick.x;
     const desired = dir * MOVE_SPEED;
     player.vx += (desired - player.vx) * Math.min(1, dt * 9);
+    applyGusts(dt);
 
     if (jumpEdge) player.buffer = 0.14;
     jumpEdge = false;
@@ -384,7 +489,8 @@
       burst(player.x, player.y + 0.05, player.z, 10);
     }
 
-    player.vy += GRAVITY * dt;
+    steerGrapple(dt);
+    if (!(grapple.active && grapple.target)) player.vy += GRAVITY * dt;
     const prevY = player.y;
     player.x += player.vx * dt;
     player.y += player.vy * dt;
@@ -420,6 +526,7 @@
     if (player.grounded) {
       player.coyote = 0.12;
       if (player.y > state.maxY) state.maxY = player.y;
+      if (grapple.active) resetGrapple();
     } else player.coyote -= dt;
 
     collectCores();
@@ -481,21 +588,26 @@
 
   function updateCamera(dt) {
     const sway = state.mode === "title" ? Math.sin(state.time * 0.35) * 0.85 : 0;
-    const destX = player.x * 0.32 + sway;
-    const destY = player.y + 2.55;
-    const destZ = 8.5;
-    const k = 1 - Math.exp(-4.2 * dt);
+    const live = state.mode === "run";
+    const rise = live ? THREE.MathUtils.clamp(player.vy * 0.16, -1.25, 1.7) : 0;
+    const leadX = live ? player.vx * 0.14 : 0;
+    const destX = player.x * 0.36 + leadX + sway;
+    const destY = player.y + 2.35 + rise;
+    const destZ = 8.15 + Math.min(1.15, Math.abs(player.vx) * 0.08);
+    const k = 1 - Math.exp(-4.6 * dt);
     const jolt = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
     state.shake = Math.max(0, state.shake - dt * 0.7);
     camera.position.x += (destX - camera.position.x) * k + jolt;
     camera.position.y += (destY - camera.position.y) * k;
     camera.position.z += (destZ - camera.position.z) * k;
-    camera.lookAt(player.x * 0.18, player.y + 1.05, -0.4);
+    camera.lookAt(player.x * 0.2 + leadX * 0.35, player.y + 1.15 + rise * 0.72, -0.4);
+    const roll = live ? THREE.MathUtils.clamp(-player.vx * 0.012, -0.08, 0.08) : 0;
+    if (roll) camera.rotateZ(roll);
   }
 
   function snapCamera() {
-    camera.position.set(player.x * 0.32, player.y + 2.55, 8.5);
-    camera.lookAt(player.x * 0.18, player.y + 1.05, -0.4);
+    camera.position.set(player.x * 0.36, player.y + 2.35, 8.15);
+    camera.lookAt(player.x * 0.2, player.y + 1.15, -0.4);
   }
 
   function updateHud() {
@@ -504,6 +616,7 @@
     $("score").textContent = String(currentScore());
     noteBest();
     $("beacon").textContent = state.checkpoint ? "beacon set" : "no beacon";
+    $("line").textContent = grapple.active ? "zip" : grapple.cd > 0 ? grapple.cd.toFixed(1) + "s" : nearestGrapple() ? "hook" : "ready";
     $("slips").textContent = String(state.slips);
   }
 
@@ -532,6 +645,20 @@
         p.x = p.baseX + Math.sin(state.time * p.speed + p.phase) * p.amp;
         p.mesh.position.x = p.x;
         if (player.ride === p) player.x += p.x - prev;
+      }
+      if (p.kind === "lift" && !p.falling) {
+        const prevY = p.y;
+        const wave = Math.sin(state.time * p.speed + p.phase) * 0.5 + 0.5;
+        p.y = p.baseY + wave * p.amp;
+        p.mesh.position.y = p.y;
+        if (player.ride === p) player.y += p.y - prevY;
+        if (p.cable) {
+          const top = p.baseY + p.amp + 0.95;
+          const span = Math.max(0.2, top - (p.y + p.h));
+          p.cable.scale.y = span;
+          p.cable.position.y = p.h + span / 2;
+        }
+        if (p.pulley) p.pulley.rotation.z += dt * (1.4 + p.speed);
       }
       if (p.kind === "crumble" && p.crumbleT != null && !p.falling) {
         p.crumbleT -= dt;
@@ -583,6 +710,8 @@
     });
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.42, 6, 16), shell);
     body.position.y = 0.5;
+    body.castShadow = true;
+    body.receiveShadow = true;
     g.add(body);
 
     const core = new THREE.Mesh(
@@ -621,6 +750,7 @@
       })
     );
     pack.position.set(0, 0.52, -0.22);
+    pack.castShadow = true;
     g.add(pack);
 
     const lamp = new THREE.PointLight(0x7ee787, 36, 7.5, 2);
@@ -691,11 +821,21 @@
   }
 
   function clearCourse() {
-    for (let i = 0; i < platforms.length; i++) disposeObject(platforms[i].mesh);
+    for (let i = 0; i < platforms.length; i++) {
+      disposeObject(platforms[i].mesh);
+      if (platforms[i].guide) disposeObject(platforms[i].guide);
+    }
     for (let i = 0; i < lasers.length; i++) disposeObject(lasers[i].group);
+    for (let i = 0; i < gusts.length; i++) {
+      disposeObject(gusts[i].vent);
+      disposeObject(gusts[i].points);
+    }
+    for (let i = 0; i < grapples.length; i++) disposeObject(grapples[i].mesh);
     platforms.length = 0;
     cores.length = 0;
     lasers.length = 0;
+    gusts.length = 0;
+    grapples.length = 0;
     goalBulb = null;
   }
 
@@ -757,6 +897,14 @@
         next.x = Math.max(-limit, Math.min(limit, Math.max(-1.1, Math.min(1.1, next.x))));
         nextBeacon += 22;
       } else tagSpecial(next, prev, rand);
+      if (next.kind === "solid" && next.y > 12 && rand() < 0.2) {
+        next.kind = "lift";
+        next.amp = 1.2 + rand() * 0.75;
+        next.speed = 0.58 + rand() * 0.38;
+        next.phase = rand() * Math.PI * 2;
+        next.baseY = next.y;
+      }
+      placeGrappleBetween(prev, next, rand);
       if (next.y > 30 && next.kind !== "beacon" && prev.kind !== "beacon" && rand() < 0.28) {
         laserGaps.push(prev.y + PLAT_H + (next.y - prev.y) * 0.5);
       }
@@ -796,12 +944,250 @@
         baseX: layout[i].baseX,
         amp: layout[i].amp,
         speed: layout[i].speed,
-        phase: layout[i].phase
+        phase: layout[i].phase,
+        baseY: layout[i].baseY
       });
       const kind = layout[i].kind;
       if ((kind === "solid" || kind === "boost" || kind === "beacon") && i > 1 && i % 3 === 0) addCore(rec, i);
     }
     for (let i = 0; i < laserGaps.length; i++) addLaser(laserGaps[i], rand() * Math.PI * 2, 1.15 + rand() * 0.55);
+    for (let i = 1; i < layout.length; i++) {
+      const step = layout[i];
+      const below = layout[i - 1];
+      if (step.y < 10 || step.kind === "goal" || step.kind === "beacon" || below.kind === "beacon") continue;
+      if (rand() > 0.16) continue;
+      const mid = below.y + PLAT_H + (step.y - below.y) * 0.55;
+      addGust(mid, rand() < 0.5 ? -1 : 1);
+    }
+  }
+
+  function addGust(y, dir) {
+    const fromRight = dir < 0;
+    const vent = new THREE.Group();
+    const housing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.86, 0.62),
+      new THREE.MeshStandardMaterial({
+        color: 0x161b22,
+        metalness: 0.58,
+        roughness: 0.38,
+        emissive: 0x0d2138,
+        emissiveIntensity: 0.6
+      })
+    );
+    housing.castShadow = true;
+    vent.add(housing);
+    const slit = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.52, 0.38),
+      new THREE.MeshStandardMaterial({
+        color: 0x58a6ff,
+        emissive: 0x58a6ff,
+        emissiveIntensity: 2.5,
+        roughness: 0.18
+      })
+    );
+    slit.position.x = fromRight ? -0.14 : 0.14;
+    vent.add(slit);
+    const vaneMat = new THREE.MeshStandardMaterial({ color: 0x30363d, metalness: 0.5, roughness: 0.4 });
+    for (let i = -1; i <= 1; i++) {
+      const vane = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 0.4), vaneMat);
+      vane.position.set(fromRight ? -0.16 : 0.16, i * 0.16, 0);
+      vane.rotation.z = dir * 0.5;
+      vent.add(vane);
+    }
+    vent.position.set(fromRight ? 3.78 : -3.78, y, 0.2);
+    scene.add(vent);
+
+    const count = 32;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    const seeds = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 6.2;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 0.7;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 0.35;
+      seeds[i] = Math.random();
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const points = new THREE.Points(geo, new THREE.PointsMaterial({
+      color: 0x58a6ff,
+      size: 5,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false,
+      sizeAttenuation: true
+    }));
+    points.position.set(0, y, 0.25);
+    scene.add(points);
+    gusts.push({ vent, points, geo, seeds, y, dir, count });
+  }
+
+  function updateGusts(dt) {
+    for (let i = 0; i < gusts.length; i++) {
+      const g = gusts[i];
+      const arr = g.geo.attributes.position.array;
+      for (let n = 0; n < g.count; n++) {
+        arr[n * 3] += g.dir * dt * (4.2 + g.seeds[n] * 3.1);
+        if (arr[n * 3] > 3.35) arr[n * 3] = -3.35;
+        if (arr[n * 3] < -3.35) arr[n * 3] = 3.35;
+      }
+      g.geo.attributes.position.needsUpdate = true;
+      const slit = g.vent.children[1];
+      if (slit && slit.material) slit.material.emissiveIntensity = 2.1 + Math.sin(state.time * 9 + i) * 0.5;
+    }
+  }
+
+  function applyGusts(dt) {
+    const body = player.y + 0.45;
+    for (let i = 0; i < gusts.length; i++) {
+      const g = gusts[i];
+      if (Math.abs(body - g.y) > 1.05) continue;
+      if (Math.abs(player.z - 0.2) > 1.35) continue;
+      player.vx += g.dir * 34 * dt;
+    }
+  }
+
+  function placeGrappleBetween(prev, next, rand) {
+    if (next.y < 8 || next.kind === "goal" || prev.kind === "boost") return;
+    const aL = prev.x - prev.w / 2;
+    const aR = prev.x + prev.w / 2;
+    const bL = next.x - next.w / 2;
+    const bR = next.x + next.w / 2;
+    let gap = 0;
+    if (bL > aR) gap = bL - aR;
+    else if (aL > bR) gap = aL - bR;
+    if (gap < 0.4 && rand() > 0.2) return;
+    if (rand() > 0.36) return;
+    const limit = SHAFT_HALF - 0.5;
+    const x = Math.max(-limit, Math.min(limit, (prev.x + next.x) * 0.5));
+    const y = prev.y + PLAT_H + Math.max(1.2, (next.y - prev.y) * 0.76);
+    addGrapple(x, y);
+  }
+
+  function addGrapple(x, y) {
+    const mesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.2, 0.032, 8, 20),
+      new THREE.MeshStandardMaterial({
+        color: 0x238636,
+        emissive: 0x238636,
+        emissiveIntensity: 1.8,
+        roughness: 0.22,
+        metalness: 0.22
+      })
+    );
+    mesh.rotation.y = Math.PI / 2;
+    mesh.position.set(x, y, 0.02);
+    scene.add(mesh);
+    grapples.push({ mesh, x, y, z: 0.02 });
+  }
+
+  function buildGrappleBeam() {
+    grapple.beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.016, 0.016, 1, 6),
+      new THREE.MeshStandardMaterial({
+        color: 0x3fb950,
+        emissive: 0x238636,
+        emissiveIntensity: 2.5,
+        roughness: 0.18
+      })
+    );
+    grapple.beam.visible = false;
+    grapple.beam.frustumCulled = false;
+    scene.add(grapple.beam);
+  }
+
+  function resetGrapple() {
+    grapple.active = false;
+    grapple.t = 0;
+    grapple.cd = 0;
+    grapple.target = null;
+    grappleEdge = false;
+    if (grapple.beam) grapple.beam.visible = false;
+  }
+
+  function nearestGrapple() {
+    let best = null;
+    let bestD = 20;
+    const py = player.y + 0.55;
+    for (let i = 0; i < grapples.length; i++) {
+      const g = grapples[i];
+      const dx = g.x - player.x;
+      const dy = g.y - py;
+      if (dy < -0.4 || dy > 3.35) continue;
+      if (Math.abs(dx) > 2.85) continue;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) {
+        bestD = d;
+        best = g;
+      }
+    }
+    return best;
+  }
+
+  function steerGrapple(dt) {
+    grapple.cd = Math.max(0, grapple.cd - dt);
+    if (grapple.active && grapple.target) {
+      const t = grapple.target;
+      const dx = t.x - player.x;
+      const dy = (t.y - 0.12) - player.y;
+      player.vx = dx * 4.4;
+      player.vy = dy * 4.8;
+      player.grounded = false;
+      player.coyote = 0;
+      grapple.t -= dt;
+      if (grapple.t <= 0 || dx * dx + dy * dy < 0.16) {
+        grapple.active = false;
+        grapple.target = null;
+        grapple.t = 0;
+        grapple.cd = 0.8;
+        player.vy = Math.max(6.8, player.vy);
+        player.vx *= 0.5;
+        puff(player.x, player.y, player.z);
+        burst(player.x, player.y + 0.3, player.z, 10);
+      }
+    } else if (grappleEdge && grapple.cd <= 0) {
+      const near = nearestGrapple();
+      if (near) {
+        grapple.active = true;
+        grapple.t = 0.46;
+        grapple.target = near;
+        player.grounded = false;
+        player.buffer = 0;
+        state.shake = 0.07;
+        burst(player.x, player.y + 0.45, player.z, 8);
+      }
+    }
+    grappleEdge = false;
+  }
+
+  function updateGrapples(dt) {
+    const near = grapple.active ? grapple.target : (grapple.cd <= 0 ? nearestGrapple() : null);
+    for (let i = 0; i < grapples.length; i++) {
+      const g = grapples[i];
+      const hot = g === near;
+      g.mesh.rotation.z += dt * (hot ? 2.6 : 0.7);
+      g.mesh.material.emissiveIntensity = hot ? 3.3 : 1.35 + Math.sin(state.time * 3 + i) * 0.28;
+      const s = hot ? 1.12 + Math.sin(state.time * 8) * 0.06 : 1;
+      g.mesh.scale.setScalar(s);
+    }
+    const beam = grapple.beam;
+    if (!beam) return;
+    if (!grapple.active || !grapple.target) {
+      beam.visible = false;
+      return;
+    }
+    const t = grapple.target;
+    const ax = player.x;
+    const ay = player.y + 0.62;
+    const az = player.z;
+    const dx = t.x - ax;
+    const dy = t.y - ay;
+    const dz = t.z - az;
+    const len = Math.hypot(dx, dy, dz) || 0.001;
+    beam.visible = true;
+    beam.position.set(ax + dx * 0.5, ay + dy * 0.5, az + dz * 0.5);
+    beam.scale.set(1, len, 1);
+    beamDir.set(dx / len, dy / len, dz / len);
+    beam.quaternion.setFromUnitVectors(beamUp, beamDir);
   }
 
   function addLaser(y, phase, speed) {
@@ -850,12 +1236,14 @@
       })
     );
     body.position.y = spec.h / 2;
+    body.castShadow = true;
+    body.receiveShadow = true;
     group.add(body);
 
     const lipColor = spec.kind === "goal" || spec.kind === "boost" ? 0x238636
       : spec.kind === "crumble" ? 0xf85149
       : 0x58a6ff;
-    const lipGlow = spec.kind === "beacon" ? 2.3 : spec.kind === "goal" ? 2 : 1.55;
+    const lipGlow = spec.kind === "beacon" ? 2.3 : spec.kind === "goal" ? 2 : spec.kind === "lift" ? 2.15 : 1.55;
     const lip = new THREE.Mesh(
       new THREE.BoxGeometry(spec.w + 0.05, 0.045, 0.07),
       new THREE.MeshStandardMaterial({
@@ -881,6 +1269,44 @@
         post.position.set(side * (spec.w * 0.36), spec.h + 0.45, 0);
         group.add(post);
       }
+    }
+
+    let cable = null;
+    let guide = null;
+    let pulley = null;
+    if (spec.kind === "lift") {
+      cable = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 1, 6),
+        new THREE.MeshStandardMaterial({ color: 0x8b949e, metalness: 0.78, roughness: 0.28 })
+      );
+      cable.castShadow = true;
+      cable.position.y = spec.h + 0.6;
+      group.add(cable);
+      const stripe = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.max(0.5, spec.w * 0.62), 0.035, 0.38),
+        new THREE.MeshStandardMaterial({ color: 0x58a6ff, emissive: 0x58a6ff, emissiveIntensity: 1.45, roughness: 0.28 })
+      );
+      stripe.position.set(0, spec.h + 0.025, 0.08);
+      group.add(stripe);
+
+      const travel = (spec.amp || 1.4) + 1.15;
+      const railMat = new THREE.MeshStandardMaterial({ color: 0x30363d, metalness: 0.72, roughness: 0.32 });
+      guide = new THREE.Group();
+      for (let side = -1; side <= 1; side += 2) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.045, travel, 0.045), railMat);
+        rail.position.set(side * (spec.w * 0.42), travel * 0.5 - 0.05, 0.05);
+        rail.castShadow = true;
+        guide.add(rail);
+      }
+      pulley = new THREE.Mesh(
+        new THREE.TorusGeometry(0.12, 0.022, 8, 18),
+        new THREE.MeshStandardMaterial({ color: 0x58a6ff, emissive: 0x58a6ff, emissiveIntensity: 1.7, roughness: 0.25 })
+      );
+      pulley.rotation.y = Math.PI / 2;
+      pulley.position.set(0, (spec.amp || 1.4) + 0.95, 0.05);
+      guide.add(pulley);
+      guide.position.set(spec.x, spec.baseY != null ? spec.baseY : spec.y, spec.z);
+      scene.add(guide);
     }
 
     if (spec.kind === "boost") {
@@ -945,9 +1371,13 @@
       d: spec.d,
       kind: spec.kind,
       baseX: spec.baseX != null ? spec.baseX : spec.x,
+      baseY: spec.baseY != null ? spec.baseY : spec.y,
       amp: spec.amp || 0,
       speed: spec.speed || 1,
       phase: spec.phase || 0,
+      cable: cable,
+      guide: guide,
+      pulley: pulley,
       crumbleT: null,
       falling: false,
       fallV: 0
@@ -1066,6 +1496,7 @@
       pulseRings[i].rotation.z += dt * (0.15 + i * 0.02);
     }
     if (player.lamp) player.lamp.intensity = 30 + Math.sin(state.time * 5.5) * 6;
+    updateSconces(dt);
   }
 
   function puff(x, y, z) {
@@ -1107,6 +1538,7 @@
       })
     );
     back.position.set(0, 48, -1.72);
+    back.receiveShadow = true;
     scene.add(back);
 
     const sideMat = new THREE.MeshStandardMaterial({
@@ -1118,9 +1550,11 @@
     });
     const left = new THREE.Mesh(new THREE.BoxGeometry(0.28, 120, 3.3), sideMat);
     left.position.set(-4.22, 48, -0.2);
+    left.receiveShadow = true;
     scene.add(left);
     const right = new THREE.Mesh(new THREE.BoxGeometry(0.28, 120, 3.3), sideMat);
     right.position.set(4.22, 48, -0.2);
+    right.receiveShadow = true;
     scene.add(right);
 
     const railMat = new THREE.MeshStandardMaterial({
@@ -1153,7 +1587,110 @@
       new THREE.MeshStandardMaterial({ color: 0x0d1117, metalness: 0.3, roughness: 0.85 })
     );
     floor.position.set(0, -0.55, -0.2);
+    floor.receiveShadow = true;
     scene.add(floor);
+  }
+
+  function buildProgress() {
+    for (let y = 4; y <= 100; y += 3.5) {
+      const lamp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 10, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0x21262d,
+          emissive: 0x161b22,
+          emissiveIntensity: 0.2,
+          roughness: 0.28
+        })
+      );
+      lamp.position.set(-3.68, y, 1.12);
+      scene.add(lamp);
+      progressLamps.push(lamp);
+    }
+  }
+
+  function updateProgress() {
+    for (let i = 0; i < progressLamps.length; i++) {
+      const lamp = progressLamps[i];
+      const on = lamp.position.y <= state.maxY + 0.2;
+      lamp.material.color.setHex(on ? 0x3fb950 : 0x21262d);
+      lamp.material.emissive.setHex(on ? 0x238636 : 0x161b22);
+      lamp.material.emissiveIntensity = on ? 2.35 : 0.16;
+    }
+  }
+
+  function buildSconces() {
+    for (let i = 0, y = 3.4; y <= 104; y += 6.4, i++) {
+      const green = i % 2 === 1;
+      const side = i % 2 === 0 ? -1 : 1;
+      addSconce(side * 3.9, y, 0.62, green ? 0x238636 : 0x58a6ff, side);
+    }
+    sconceBlue = new THREE.PointLight(0x58a6ff, 18, 8.5, 2);
+    sconceBlue.position.set(-3.2, 4, 1.1);
+    scene.add(sconceBlue);
+    sconceGreen = new THREE.PointLight(0x238636, 14, 7.5, 2);
+    sconceGreen.position.set(3.2, 8, 1.1);
+    scene.add(sconceGreen);
+  }
+
+  function addSconce(x, y, z, color, side) {
+    const group = new THREE.Group();
+    const housing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 0.5, 0.24),
+      new THREE.MeshStandardMaterial({ color: 0x161b22, metalness: 0.62, roughness: 0.36 })
+    );
+    housing.castShadow = true;
+    group.add(housing);
+    const glow = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.1, 0.3),
+      new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 2.2,
+        roughness: 0.18,
+        side: THREE.DoubleSide
+      })
+    );
+    glow.position.set(side > 0 ? -0.09 : 0.09, 0, 0);
+    glow.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+    group.add(glow);
+    const cap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.05, 0.26),
+      new THREE.MeshStandardMaterial({ color: 0x30363d, metalness: 0.5, roughness: 0.4 })
+    );
+    cap.position.y = 0.24;
+    group.add(cap);
+    group.position.set(x, y, z);
+    scene.add(group);
+    sconces.push({ glow, x, y, z, color });
+  }
+
+  function updateSconces(dt) {
+    if (!sconceBlue || !sconces.length) return;
+    let blue = sconces[0];
+    let green = sconces[0];
+    let blueDy = Infinity;
+    let greenDy = Infinity;
+    const glide = 1 - Math.exp(-3.2 * dt);
+    for (let i = 0; i < sconces.length; i++) {
+      const s = sconces[i];
+      const dy = Math.abs(s.y - player.y);
+      const near = dy < 9;
+      s.glow.material.emissiveIntensity = (near ? 2.4 : 1.1) + Math.sin(state.time * 2.6 + i) * 0.35;
+      if (s.color === 0x58a6ff && dy < blueDy) {
+        blueDy = dy;
+        blue = s;
+      }
+      if (s.color === 0x238636 && dy < greenDy) {
+        greenDy = dy;
+        green = s;
+      }
+    }
+    sconceBlue.position.x += (blue.x * 0.78 - sconceBlue.position.x) * glide;
+    sconceBlue.position.y += (blue.y - sconceBlue.position.y) * glide;
+    sconceBlue.position.z += (blue.z + 0.55 - sconceBlue.position.z) * glide;
+    sconceGreen.position.x += (green.x * 0.78 - sconceGreen.position.x) * glide;
+    sconceGreen.position.y += (green.y - sconceGreen.position.y) * glide;
+    sconceGreen.position.z += (green.z + 0.55 - sconceGreen.position.z) * glide;
   }
 
   function facadeTexture() {
