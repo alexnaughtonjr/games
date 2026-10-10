@@ -1,34 +1,56 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Live Arcade - your stream audience plays together</title><link rel="icon" href="data:,">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Arcade · phones play on your screen</title>
+<meta name="description" content="Open a host screen, show a QR code, and phones become controllers in a 3D arena. No install.">
+<meta property="og:title" content="Live Arcade · phones in one arena">
+<meta property="og:description" content="Crown Rush: a big-screen party game. Scan the QR and your phone is the controller.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/live-arcade/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/arcade.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Live Arcade · phones in one arena">
+<meta name="twitter:description" content="Crown Rush: a big-screen party game. Scan the QR and your phone is the controller.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/arcade.png">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../shared/theme.css">
-<style>.steps{counter-reset:s}.steps .card{position:relative;padding-left:56px}.steps .card:before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:16px;width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700}</style>
-</head><body><div class="wrap">
+</head>
+<body>
+<div class="wrap">
 <section class="hero">
-  <span class="pill green">multiplayer · no install · free</span>
-  <h1>Your live audience,<br>playing in one 3D arena.</h1>
-  <p class="lead">Open the host screen on your stream. Viewers scan a QR code and their phone turns into a controller, so they show up on screen as glowing players fighting over the crown. Their emoji reactions fill a <b>hype meter</b> that sets off a meteor storm.</p>
-  <div class="cta-row"><a class="btn primary big" href="host.html">▶ Open a host screen</a><a class="btn big" href="play.html">📱 Join a room</a><span id="up"></span></div>
-  <p class="small muted">Solo test: open the host screen, click "+4 bots", then open <b>Join</b> in a second tab using the same room code.</p>
+  <span class="pill green">one screen · many phones</span>
+  <h1>Your audience,<br>in one 3D arena.</h1>
+  <p class="lead">Open the host on a laptop or a stream. People scan the QR code and their phone becomes a glowing player fighting for the crown. Emoji taps fill a hype meter that calls down meteors.</p>
+  <div class="cta-row">
+    <a class="btn primary big" href="host.html">▶ Open host screen</a>
+    <a class="btn big" href="play.html">Join with a phone</a>
+    <span id="up"></span>
+  </div>
+  <p class="small muted">Try it alone: host, then +4 bots, then Join in another tab with the room code.</p>
+  <div class="cta-row" id="share"></div>
 </section>
-<div class="grid g3 steps">
-  <div class="card"><h3>Host</h3><p class="muted small">Put host.html into OBS as a browser or window source while you stream on X, IG or FB.</p></div>
-  <div class="card"><h3>Viewers join</h3><p class="muted small">They scan the QR code or type the 5-letter code. Phone controls: joystick, dash, emojis.</p></div>
-  <div class="card"><h3>Crown Rush</h3><p class="muted small">90-second rounds. Stand in the gold zone to score and dash others out of it. The winner gets shouted out on stream.</p></div>
+<div class="grid g3">
+  <div class="card"><h3>1 · Host</h3><p class="muted small">A 3D arena with a QR code and a live scoreboard. Drop the window into a stream if you want.</p></div>
+  <div class="card"><h3>2 · Phones</h3><p class="muted small">Joystick, dash, and five emojis. No app and no account.</p></div>
+  <div class="card"><h3>3 · Crown Rush</h3><p class="muted small">90 seconds in the gold zone. Dash people out of it. Winner gets the shout.</p></div>
 </div>
-<h2>For other streamers <span class="pill">soon</span></h2>
-<p class="muted">Want this for your own stream, with your colors and your sponsor on the arena floor? DM me. Creator setups are done by hand for now, and I won't take money until it's ready for you.</p>
-<h2 id="sponsor">Sponsor the arena floor</h2><div id="slots"></div>
+<h2 id="sponsor">Arena floor</h2>
+<p class="muted">The floor can carry one sponsor. DM @alexnaughtonjr first, then Venmo. This page never charges a card.</p>
+<div id="slots"></div>
 <h2>Open dashboard</h2><div id="stats"></div>
 <h2>Feature requests</h2><div class="card" id="board"></div>
-<h2>How it works (honest)</h2>
-<p class="muted small">Phones connect straight to the host browser over WebRTC (PeerJS) using the free public PeerJS broker. No game server, no accounts. If WebRTC is blocked, it falls back to local mode, where only tabs on the same device can join. Very large crowds (100+) haven't been tested yet.</p>
+<p class="muted small">Phones talk to the host browser over WebRTC (PeerJS). If that is blocked, two tabs on the same device still work. Huge crowds are untested.</p>
 </div>
 <script src="../shared/lab.js"></script>
 <script>
 Lab.chrome({id:'live-arcade', name:'Live Arcade', icon:'📡', nav:[['host','host.html'],['join','play.html']]});
-Lab.upgrade(document.getElementById('up'), {amount:5, label:'♥ Support - $5', note:'Live Arcade'});
-Lab.sponsors(document.getElementById('slots'), {product:'Live Arcade', base:150, mult:2, slots:4, placement:'Logo on the arena floor, on every stream'});
-Lab.stats(document.getElementById('stats'), {product:'live-arcade', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Visits','visits']], log:[['Oct 9','Crown Rush: phone controllers, QR join, hype-meter meteor storms, bots.']]});
-Lab.board(document.getElementById('board'), {product:'Live Arcade', seed:['More game modes (soccer, tag)','Twitch/X chat command join','Custom arena themes per streamer','Persistent season leaderboard']});
-</script></body></html>
+Lab.mountShare(document.getElementById('share'), {title:'Live Arcade', text:'Phones become controllers in a 3D arena.'});
+Lab.upgrade(document.getElementById('up'), {amount:5, label:'Tip $5', note:'Live Arcade'});
+Lab.sponsors(document.getElementById('slots'), {product:'Live Arcade', base:150, mult:2, slots:4, placement:'Name on the arena floor'});
+Lab.stats(document.getElementById('stats'), {product:'live-arcade', public:{mrr:0,sponsors:0,launched:'2026-10-09'}, local:[['Visits','visits']], log:[['Oct 10','Rebuilt arena: bloom, impacts, brighter pillars, share.']]});
+Lab.board(document.getElementById('board'), {product:'Live Arcade', seed:['Soccer mode','Chat-command join','Season board']});
+</script>
+</body>
+</html>

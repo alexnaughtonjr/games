@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Smile Preview - private prototype</title><link rel="icon" href="data:,">
+<title>Smile Preview · whitening stays on this device</title>
+<meta name="description" content="Private prototype. Drag a slider to preview a whiter smile. The photo never leaves your browser. Not a promised result.">
+<meta property="og:title" content="Smile Preview">
+<meta property="og:description" content="On-device whitening preview. Private prototype. Not a promised dental result.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/smile-preview/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/smile.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Smile Preview">
+<meta name="twitter:description" content="On-device whitening preview. The photo never uploads.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/smile.png">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
 .app{display:grid;grid-template-columns:1fr 300px;gap:16px}@media(max-width:860px){.app{grid-template-columns:1fr}}
@@ -17,7 +28,8 @@ input[type=range]{width:100%}
 </style></head><body><div class="wrap">
 <section class="hero" style="padding-bottom:10px">
   <h1 style="font-size:34px">See a brighter smile before the first visit.</h1>
-  <p class="lead">Load a selfie, tap the teeth, and drag the slider. It's a <b>cosmetic simulation that runs entirely on this device</b>. Photos are never uploaded.</p>
+  <p class="lead">The sample smile is already loaded. Drag the brightness slider. A real photo never leaves this device. This is a simulation, not a promised result.</p>
+  <div class="cta-row" id="share"></div>
 </section>
 <div class="app">
   <div>
@@ -43,8 +55,10 @@ input[type=range]{width:100%}
 <h2>Prototype dashboard</h2><div id="stats"></div>
 </div>
 <script src="../shared/lab.js"></script>
+<script src="../shared/juice.js"></script>
 <script>
 Lab.chrome({id:'smile-preview', name:'Smile Preview', icon:'😁', proto:true});
+Lab.mountShare(document.getElementById('share'), {title:'Smile Preview', text:'Whitening preview that stays on your device. Not a promised result.'});
 Lab.board(document.getElementById('board'), {product:'Smile Preview (prototype)', seed:['Auto-detect teeth with on-device ML','Gap/shape simulation (veneers)','Office branding by URL','Side-by-side share card']});
 Lab.stats(document.getElementById('stats'), {product:'smile-preview', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Photos previewed','previews'],['Before/after saved','saves']], log:[['Oct 9','Prototype: smart select, brush, shade slider, before/after export, local-only form.']]});
 const $=id=>document.getElementById(id);
@@ -94,7 +108,7 @@ hd.onpointerup=()=>dragH=false;
 for(const [id,m] of [['wand','wand'],['brush','brush'],['erase','erase']]) $(id).onclick=()=>{ mode=m; ['wand','brush','erase'].forEach(k=>$(k).classList.toggle('on',k===m)); };
 $('clear').onclick=()=>{ mx.clearRect(0,0,W,H); render(); };
 $('showmask').onclick=()=>{ maskOn=!maskOn; $('showmask').textContent=maskOn?'👁 hide overlay':'👁 show overlay'; render(); };
-$('lvl').oninput=render;
+$('lvl').oninput=()=>{ render(); if (Math.random()<.15) LabFX.sfx.pop(); };
 $('dl').onclick=()=>{ if(!src) return; const c=document.createElement('canvas'); c.width=W*2; c.height=H+50; const x=c.getContext('2d'); x.fillStyle='#0d1117'; x.fillRect(0,0,c.width,c.height); x.putImageData(src,0,0); x.drawImage(A,W,0);
   x.fillStyle='#e6edf3'; x.font='20px JetBrains Mono, monospace'; x.fillText('before',12,H+32); x.fillText('simulation - not a promised result',W+12,H+32);
   const a=document.createElement('a'); a.download='smile-preview.png'; a.href=c.toDataURL(); a.click(); Lab.track('smile-preview','saves'); };

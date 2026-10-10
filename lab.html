@@ -1,51 +1,107 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Alexander Haislip · product lab</title>
-<meta name="description" content="Ten small, free-to-host products built in public by Alexander Haislip.">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Haislip Lab · ten products you can open</title>
+<meta name="description" content="Ten small, free, static products by Alexander Haislip. Play a 3D game, host a phone-controlled arena, or turn a transcript into a quiz. No accounts.">
+<meta property="og:title" content="Haislip Lab · ten products you can open">
+<meta property="og:description" content="Play Neon Drift, host Live Arcade, or open any of ten static products. No install, no account.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/lab.html">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/lab.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Haislip Lab · ten products you can open">
+<meta name="twitter:description" content="Play Neon Drift, host Live Arcade, or open any of ten static products. No install, no account.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/lab.png">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="shared/theme.css">
-<style>
-#bg{position:fixed;inset:0;z-index:-1;opacity:.55}
-.prod{display:flex;flex-direction:column;gap:8px;transition:.15s}.prod:hover{border-color:var(--blue);transform:translateY(-2px)}
-.prod .ic{font-size:34px}.prod .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
-</style></head><body><canvas id="bg"></canvas><div class="wrap">
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="wrap">
 <section class="hero">
-  <span class="pill green">built in public</span>
-  <h1 style="font-size:44px">Ten small products.<br>One shared lab.</h1>
-  <p class="lead">Every one of these is a plain static page you can open in a browser. No accounts, no checkout, and nothing to install. The revenue numbers on each dashboard are real, and right now they're $0.</p>
+  <span class="pill green">built in public · open in the browser</span>
+  <h1>Ten products.<br>Tap one. You're in.</h1>
+  <p class="lead">Each card is a finished static page: a daily 3D race, a party arena your phone controls, a stage you steer with words. No account, no checkout, nothing to install.</p>
+  <div class="cta-row" id="share"></div>
+  <div class="cta-row">
+    <a class="btn primary big" href="weekly-game-drop/neon-drift/">▶ Play today's race</a>
+    <a class="btn big" href="#products">See all ten</a>
+  </div>
 </section>
-<h2>🚀 Public products</h2>
+<h2 id="products">Public</h2>
 <div class="grid g3" id="pub"></div>
-<h2>🔒 Private prototypes</h2>
-<p class="muted small">These are personal experiments that run on sample data. They aren't marketed, aren't for sale, and aren't affiliated with any employer or brand.</p>
+<h2>Private prototypes</h2>
+<p class="muted small">Personal experiments on sample data. Not for sale, not marketed, and not affiliated with any employer or brand.</p>
 <div class="grid g3" id="priv"></div>
 </div>
-<script src="shared/vendor/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
 <script src="shared/lab.js"></script>
 <script>
 Lab.chrome({id:'lab', name:'Haislip Lab', icon:'🧪', tag:'10 products'});
-const P=[
- ['weekly-game-drop/','🏁','Weekly Game Drop','A new browser game every week. This week: Neon Drift, a daily-seeded 3D racer where you race your own ghost.',[['play Neon Drift','weekly-game-drop/neon-drift/']]],
- ['live-arcade/','📱','Live Arcade',"Party game on a big screen with phones as controllers. Scan the QR code and you're in. Peer-to-peer, no server.",[['host a room','live-arcade/host.html']]],
- ['infinite-jam/','🎛','Infinite Jam','A visual stage that never stops. The crowd types prompts and the scene and music change to match.',[['open stage','infinite-jam/stage.html']]],
- ['arcade-kit/','🧰','Arcade Kit','One script tag gives any web game scores, challenge links, tips and a sponsor slot.',[['demo game','arcade-kit/demo/']]],
- ['podcast-to-playable/','🎙','Podcast → Playable','Paste a transcript and get quote cards, chapters, and a 3D quiz that fits in a single link.',[]],
+Lab.mountShare(document.getElementById('share'), {
+  title: 'Haislip Lab',
+  text: 'Ten small browser products. Play today’s 3D race:'
+});
+const P = [
+  ['pv-drift','Weekly Game Drop','Same 3D course for everyone today. Race your own ghost.',[['▶ Play Neon Drift','weekly-game-drop/neon-drift/'],['About','weekly-game-drop/']],'NEON DRIFT'],
+  ['pv-arcade','Live Arcade','Big screen, phones as controllers. Scan and you are in the arena.',[['▶ Host','live-arcade/host.html'],['Join','live-arcade/play.html']],'CROWN RUSH'],
+  ['pv-jam','Infinite Jam','Type a vibe on your phone. The stage and the groove change.',[['▶ Open stage','infinite-jam/stage.html'],['About','infinite-jam/']],'TYPE A VIBE'],
+  ['pv-kit','Arcade Kit','One script tag: scores, dares, a tip, a sponsor slot.',[['▶ Play demo','arcade-kit/demo/'],['Docs','arcade-kit/']],'ORB POP'],
+  ['pv-pod','Podcast → Playable','Paste a transcript. Get quote cards and a 3D quiz link.',[['▶ Try a sample','podcast-to-playable/']],'QUIZ LINK'],
 ];
-const D=[
- ['chairside-ai/','🧑‍⚕️','Chairside Explainer','3D procedure walkthroughs with voice, kid mode and Spanish.'],
- ['smile-preview/','😁','Smile Preview','Whitening simulation that runs on the device. Photos never leave it.'],
- ['dental-jobs/','🪥','OpenChair Jobs','A dental job board that requires a pay range on every listing. Sample data.'],
- ['tooth-defender/','🦷','Tooth Defender','A 2-minute 3D brushing game with zone coaching and a certificate.'],
- ['dental-jam/','🏆','Dental Build Jam','Concept page for a 7-day jam to build small dental tools.'],
+const D = [
+  ['pv-chair','Chairside Explainer','A filling, explained in about a minute. Voice, kid mode, Spanish.',[['▶ Start','chairside-ai/']]],
+  ['pv-smile','Smile Preview','Drag the slider. The photo never leaves this device.',[['▶ See a smile','smile-preview/']]],
+  ['pv-jobs','OpenChair Jobs','Every sample listing shows a pay range. Nothing is real yet.',[['▶ Browse pay','dental-jobs/']]],
+  ['pv-tooth','Tooth Defender','Scrub for two minutes. Leave with a certificate.',[['▶ Play','tooth-defender/play.html']]],
+  ['pv-jam2','Dental Build Jam','A concept for a 7-day jam. Not a scheduled event.',[['▶ Read the concept','dental-jam/']]],
 ];
-const card=(p,priv)=>{ const a=Lab.h('div',{class:'card prod'}); a.innerHTML=`<div class="ic">${p[1]}</div><b>${p[2]}</b>${priv?'<span class="pill orange" style="align-self:flex-start">private prototype</span>':'<span class="pill green" style="align-self:flex-start">live mvp</span>'}<p class="small muted">${p[3]}</p>`;
-  const row=Lab.h('div',{class:'row'}); row.append(Lab.h('a',{class:'btn primary',href:p[0]},'open')); (p[4]||[]).forEach(([l,u])=>row.append(Lab.h('a',{class:'btn',href:u},l))); a.append(row); return a; };
-P.forEach(p=>document.getElementById('pub').append(card(p))); D.forEach(p=>document.getElementById('priv').append(card(p,true)));
-// background: slow drifting wire shapes
-const cv=document.getElementById('bg'), R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); R.setPixelRatio(Math.min(devicePixelRatio,1.5));
-const S=new THREE.Scene(), C=new THREE.PerspectiveCamera(60,1,.1,100); C.position.z=14;
-const geos=[new THREE.IcosahedronGeometry(1,0),new THREE.TorusKnotGeometry(.7,.2,60,8),new THREE.OctahedronGeometry(1),new THREE.BoxGeometry(1.3,1.3,1.3)];
-const objs=[]; for(let i=0;i<22;i++){ const m=new THREE.Mesh(geos[i%4],new THREE.MeshBasicMaterial({color:[0x238636,0x58a6ff,0x8957e5][i%3],wireframe:true,transparent:true,opacity:.35})); m.position.set((Math.random()-.5)*30,(Math.random()-.5)*18,-Math.random()*12); m.userData.v=new THREE.Vector3((Math.random()-.5)*.004,(Math.random()-.5)*.004,0); S.add(m); objs.push(m); }
-function rs(){ R.setSize(innerWidth,innerHeight,false); C.aspect=innerWidth/innerHeight; C.updateProjectionMatrix(); } addEventListener('resize',rs); rs();
-let sy=0; addEventListener('scroll',()=>sy=scrollY);
-(function loop(){ requestAnimationFrame(loop); objs.forEach((o,i)=>{ o.rotation.x+=.002+i*1e-4; o.rotation.y+=.003; o.position.add(o.userData.v); }); C.position.y=-sy*.004; R.render(S,C); })();
-</script></body></html>
+function card(p, priv){
+  const art = document.createElement('div');
+  art.className = 'pv ' + p[0];
+  art.innerHTML = (p[0]==='pv-drift' ? '<i></i>' : '') + '<b>' + p[4] + '</b>';
+  const body = Lab.h('div',{class:'body'});
+  body.append(Lab.h('b',{}, p[1]));
+  body.append(Lab.h('span',{class:'pill ' + (priv?'orange':'green'), style:'align-self:flex-start'}, priv?'private prototype':'live'));
+  body.append(Lab.h('p',{class:'small muted'}, p[2]));
+  const row = Lab.h('div',{class:'row'});
+  p[3].forEach((pair,i) => row.append(Lab.h('a',{class:'btn'+(i?'':' primary'), href:pair[1]}, pair[0])));
+  body.append(row);
+  return Lab.h('article',{class:'card hub'}, art, body);
+}
+P.forEach(p => document.getElementById('pub').append(card(p)));
+D.forEach(p => document.getElementById('priv').append(card(p, true)));
+
+const cv = document.getElementById('bg');
+cv.style.cssText = 'position:fixed;inset:0;z-index:-1;width:100%;height:100%;opacity:.55';
+const R = new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:true, powerPreference:'low-power'});
+R.setPixelRatio(1);
+const S = new THREE.Scene(), C = new THREE.PerspectiveCamera(55,1,.1,80);
+C.position.set(0,0,16);
+S.add(new THREE.AmbientLight(0xffffff,.4));
+const a = new THREE.PointLight(0x58a6ff, 12, 40); a.position.set(6,4,8); S.add(a);
+const b = new THREE.PointLight(0x238636, 8, 36); b.position.set(-6,-2,6); S.add(b);
+const geos = [new THREE.IcosahedronGeometry(1,0), new THREE.OctahedronGeometry(1.1), new THREE.TorusGeometry(1,.28,8,20), new THREE.BoxGeometry(1.4,1.4,1.4)];
+const cols = [0x238636,0x58a6ff,0xbc8cff];
+const objs = [];
+for (let i=0;i<12;i++){
+  const m = new THREE.Mesh(geos[i%4], new THREE.MeshStandardMaterial({color:cols[i%3], emissive:cols[i%3], emissiveIntensity:.45, roughness:.35, metalness:.25}));
+  m.position.set((Math.random()-.5)*26,(Math.random()-.5)*14,-Math.random()*8);
+  m.userData.s = .004 + Math.random()*.004;
+  S.add(m); objs.push(m);
+}
+function rs(){ R.setSize(innerWidth, innerHeight, false); C.aspect = innerWidth/innerHeight; C.updateProjectionMatrix(); }
+addEventListener('resize', rs); rs();
+let on = true;
+document.addEventListener('visibilitychange', () => { on = !document.hidden; if (on) loop(); });
+function loop(){ if (!on) return; requestAnimationFrame(loop);
+  objs.forEach((o,i) => { o.rotation.y += o.userData.s; o.rotation.x += o.userData.s*.6; });
+  R.render(S,C);
+}
+loop();
+</script>
+</body>
+</html>

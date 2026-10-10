@@ -30,11 +30,17 @@ window.Director = (function(){
   const api = { state:{...base}, queue:[], history:[{...base}], onChange:()=>{}, onBreak:()=>{} };
   const AUTOPLAY = ['neon rain over tokyo','deep ocean at night','gold summer sunrise','galaxy lofi dream','forest storm','frozen glitch city','fire rave drop'];
   let aired = 0, auto = 0, breaks = 0;
-  api.enqueue = (text, by) => { api.queue.push({text: String(text).slice(0,80), by}); };
+  let timer = null;
+  function later(fn, ms){ clearTimeout(timer); timer = setTimeout(fn, ms); }
+  api.enqueue = (text, by) => {
+    api.queue.unshift({text: String(text).slice(0,80), by});
+    api.onBreak(false, breaks);
+    later(airNext, 450);
+  };
   function airNext(){
     let p = api.queue.shift(); if (!p) p = {text: AUTOPLAY[auto++ % AUTOPLAY.length], by:'autopilot'};
     api.state = {...parse(p.text), by:p.by}; api.history.push(api.state); aired++; api.onChange(api.state);
-    setTimeout(() => { if (aired % BREAK_EVERY === 0) { api.onBreak(true, breaks); setTimeout(()=>{ api.onBreak(false, breaks++); airNext(); }, BREAK_LEN*1000); } else airNext(); }, SEG*1000);
+    later(() => { if (aired % BREAK_EVERY === 0) { api.onBreak(true, breaks); later(()=>{ api.onBreak(false, breaks++); airNext(); }, BREAK_LEN*1000); } else airNext(); }, SEG*1000);
   }
   api.start = () => airNext();
   api.parse = parse;

@@ -1,6 +1,18 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OpenChair Jobs - private prototype</title><link rel="icon" href="data:,">
+<title>OpenChair Jobs · every listing shows pay</title>
+<meta name="description" content="Private prototype job board. Every sample listing includes a pay range. No real employers. Nothing is for sale.">
+<meta property="og:title" content="OpenChair Jobs">
+<meta property="og:description" content="A pay-transparent dental job board prototype. Sample data only.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/dental-jobs/">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/jobs.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenChair Jobs">
+<meta name="twitter:description" content="Every sample listing shows a pay range. Private prototype.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/jobs.png">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}
@@ -19,7 +31,9 @@
 <section class="hero" style="padding-bottom:10px">
   <h1 style="font-size:34px">A dental job board where every listing shows the pay.</h1>
   <p class="lead">Hygienists, assistants, front desk, and associates. Each listing needs a real pay range, and the board charts market rates as listings come in. <b>Every listing below is made-up sample data.</b></p>
-  <div class="cta-row"><a class="btn primary" href="#post">+ Post a job (demo)</a><a class="btn" href="#pay">📊 Pay data</a></div>
+  <div class="cta-row"><a class="btn primary big" href="#list">See the pay ranges</a><a class="btn" href="#post">Post a job (demo)</a></div>
+  <div class="cta-row" id="share"></div>
+  <canvas id="sky" style="width:100%;height:180px;display:block;margin-top:14px;border:1px solid var(--border);border-radius:12px"></canvas>
 </section>
 <div class="grid g4" id="kpi"></div>
 <div class="filters">
@@ -51,9 +65,12 @@
 <h2>Idea board</h2><div class="card" id="board"></div>
 <h2>Prototype dashboard</h2><div id="stats"></div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
 <script src="../shared/lab.js"></script>
+<script src="../shared/juice.js"></script>
 <script>
 Lab.chrome({id:'dental-jobs', name:'OpenChair Jobs', icon:'🪥', proto:true});
+Lab.mountShare(document.getElementById('share'), {title:'OpenChair Jobs', text:'A job board where every listing shows the pay. Prototype, sample data.'});
 Lab.board(document.getElementById('board'), {product:'OpenChair Jobs (prototype)', seed:['Email alerts for saved searches','Map view','Salary report PDF','Temp shift calendar']});
 Lab.stats(document.getElementById('stats'), {product:'dental-jobs', public:{mrr:0,sponsors:0,launched:'2026-10-09 (prototype)'}, local:[['Listings opened','opens'],['Previews','previews']], log:[['Oct 9','Prototype: sample listings, filters, pay chart, post-a-job preview.']]});
 const $=id=>document.getElementById(id);
@@ -89,4 +106,25 @@ function draft(){ return {role:$('pTitle').value||'Dental Hygienist',office:$('p
 $('preview').onclick=()=>{ const d=draft(); if(!d.lo||!d.hi||d.hi<d.lo){ Lab.toast('A pay range is required (that is the whole point).'); return; } $('pv').innerHTML=''; $('pv').append(card(d,true)); Lab.track('dental-jobs','previews'); };
 $('request').onclick=()=>{ const d=draft(); const text=`Listing request (prototype board): ${d.role} at ${d.office}, ${d.city}, ${d.st} - $${d.lo}-${d.hi}/hr, ${d.type}. ${d.desc}`; navigator.clipboard?.writeText(text).catch(()=>{}); Lab.toast('Copied the listing text. This is a prototype, so nothing was posted or charged.'); window.open(Lab.LINKS.x,'_blank','noopener'); };
 window.__jobs=()=>({shown:$('list').children.length});
+(() => {
+  const cv=$('sky'); if(!cv || !window.THREE) return;
+  const R=new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:true});
+  R.setPixelRatio(1); R.outputColorSpace=THREE.SRGBColorSpace;
+  const S=new THREE.Scene(), C=new THREE.PerspectiveCamera(40,2,.1,40);
+  C.position.set(0,4,12); C.lookAt(0,1,0);
+  S.add(new THREE.AmbientLight(0xffffff,.4));
+  const L=new THREE.PointLight(0x58a6ff, 12, 30); L.position.set(0,6,6); S.add(L);
+  const bars=Object.keys(ROLES).map((role,i)=>{
+    const js=jobs.filter(j=>j.role===role);
+    const mid=js.length?js.reduce((a,j)=>a+(j.lo+j.hi)/2,0)/js.length:20;
+    const h=mid/22;
+    const m=new THREE.Mesh(new THREE.BoxGeometry(.7,h,.7), new THREE.MeshStandardMaterial({color:0x238636, emissive:0x3fb950, emissiveIntensity:.45, roughness:.4}));
+    m.position.set((i-3)*1.15, h/2, 0); S.add(m); return m;
+  });
+  function rs(){ const w=cv.clientWidth||600, h=cv.clientHeight||180; R.setSize(w,h,false); C.aspect=w/h; C.updateProjectionMatrix(); }
+  addEventListener('resize', rs); rs();
+  let on=true; document.addEventListener('visibilitychange',()=>{ on=!document.hidden; if(on) loop(); });
+  function loop(){ if(!on) return; requestAnimationFrame(loop); bars.forEach((b,i)=>b.rotation.y+=.004); R.render(S,C); }
+  loop();
+})();
 </script></body></html>

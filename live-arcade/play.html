@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Live Arcade · Controller</title><link rel="icon" href="data:,">
+<title>Live Arcade · join on your phone</title>
+<meta name="description" content="Join a Crown Rush room. Your phone is the controller: steer, dash, send emojis.">
+<meta property="og:title" content="Live Arcade · join">
+<meta property="og:description" content="Type the room code. Your phone becomes a player in the arena.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raw.githack.com/alexnaughtonjr/games/main/live-arcade/play.html">
+<meta property="og:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/arcade.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Live Arcade · join">
+<meta name="twitter:description" content="Type the room code. Your phone becomes a player in the arena.">
+<meta name="twitter:image" content="https://raw.githack.com/alexnaughtonjr/games/main/shared/og/arcade.png">
+<link rel="icon" href="data:,"><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
 html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -32,7 +43,8 @@ html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit
   <div class="emos" id="emos"><button>🔥</button><button>😂</button><button>👑</button><button>💥</button><button>❤️</button></div>
   <p class="small muted" style="text-align:center">Keyboard: WASD/arrows + Space · emojis fill the hype meter ☄️</p>
 </div>
-<script src="../shared/vendor/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="../shared/juice.js"></script>
 <script src="net.js"></script>
 <script>
 (() => {
@@ -61,7 +73,7 @@ function up(){ act=null; inp.x=inp.y=0; knob.style.transform=''; }
 joy.addEventListener('touchstart',e=>{act=e.changedTouches[0].identifier; mv(e); e.preventDefault();},{passive:false});
 joy.addEventListener('touchmove',e=>{mv(e); e.preventDefault();},{passive:false}); joy.addEventListener('touchend',up);
 joy.addEventListener('mousedown',e=>{ mv(e); const mm=ev=>mv(ev), mu=()=>{up(); removeEventListener('mousemove',mm); removeEventListener('mouseup',mu);}; addEventListener('mousemove',mm); addEventListener('mouseup',mu); });
-$('dash').addEventListener('touchstart',e=>{dash=true; navigator.vibrate&&navigator.vibrate(30); e.preventDefault();},{passive:false}); $('dash').onclick=()=>dash=true;
+$('dash').addEventListener('touchstart',e=>{dash=true; navigator.vibrate&&navigator.vibrate(30); LabFX.sfx.boost(); e.preventDefault();},{passive:false}); $('dash').onclick=()=>{dash=true; LabFX.sfx.boost();};
 const keys={}; addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1; if(e.key===' ')dash=true; kb();}); addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0; kb();});
 function kb(){ if(act!=null) return; inp.x=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0); inp.y=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0); }
 $('emos').onclick = e => { if (e.target.tagName==='BUTTON' && net) net.send({t:'emo', id, e:e.target.textContent}); };

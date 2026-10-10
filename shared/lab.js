@@ -2,6 +2,10 @@
    No backend, no fake payments. Everything persistent lives in this browser's localStorage,
    and every number shown as "public" comes from the PRODUCT config that Alexander edits by hand. */
 (function(){
+  const font = document.createElement('link');
+  font.rel = 'stylesheet';
+  font.href = 'https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.2.5/latin-700.css';
+  document.head.appendChild(font);
   const HUB = (document.currentScript && document.currentScript.src) ? new URL('../lab.html', document.currentScript.src).href : '../lab.html';
   const LINKS = {
     venmo: 'https://venmo.com/u/alexnaughtonjr',
@@ -144,5 +148,26 @@
       cfg.label || `★ Support - ${money(cfg.amount||5)} via Venmo`));
   }
 
-  window.Lab = { LINKS, h, $, store, money, toast, chrome, track, count, sponsors, board, chart, stats, upgrade };
+  /* Share the current page. Web Share on phones, copy, and an X intent. */
+  function mountShare(el, cfg){
+    cfg = cfg || {};
+    const url = cfg.url || location.href;
+    const title = cfg.title || document.title;
+    const text = cfg.text || title;
+    const tweet = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text + ' ' + url);
+    const btn = h('button', {class:'btn', type:'button'}, cfg.label || 'Share');
+    btn.addEventListener('click', async () => {
+      const payload = { title, text, url };
+      if (navigator.share) {
+        try { await navigator.share(payload); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      try { await navigator.clipboard.writeText(text + '\n' + url); toast('Link copied'); }
+      catch (err) { prompt('Copy link', url); }
+    });
+    el.append(btn, h('a', {class:'btn', href:tweet, target:'_blank', rel:'noopener'}, 'Post on X'));
+    return { url, tweet };
+  }
+
+  window.Lab = { LINKS, h, $, store, money, toast, chrome, track, count, sponsors, board, chart, stats, upgrade, mountShare };
 })();

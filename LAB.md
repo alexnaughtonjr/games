@@ -1,6 +1,6 @@
 # Haislip Lab: 10 static products
 
-Open `lab.html` for the hub. Everything is plain HTML/JS: no build step, no backend, no keys. Shared pieces live in `shared/` (Primer-dark theme, `lab.js` build-in-public toolkit, and vendored Three.js r160, PeerJS 1.5.4, and qrcode-generator).
+Open `lab.html` for the hub. Everything is plain HTML/JS: no build step, no backend, no keys. Shared pieces live in `shared/` (Primer-dark theme, `lab.js`, WebAudio juice, and a small bloom pass). Three.js, PeerJS, and the QR library load from jsDelivr. Pages use relative paths so they work on raw.githack.com serving `main`.
 
 | Folder | Product | Status |
 |---|---|---|
