@@ -151,7 +151,8 @@
   });
   scene.add(grid);
 
-  const previewColors = [0x238636, 0x2ea043, 0x3fb950, 0x56d364, 0x58a6ff, 0x79c0ff, 0xbc8cff];
+  const PLAY_COLORS = [0x238636, 0x2ea043, 0x3fb950, 0x56d364, 0x58a6ff, 0x79c0ff, 0xbc8cff];
+  const previewColors = PLAY_COLORS;
   const tower = new THREE.Group();
   world.add(tower);
   const preview = [];
@@ -219,15 +220,148 @@
   window.addEventListener("resize", resize);
   resize();
 
-  let closer = false;
+  const BASE = 3.05;
+  const state = { mode: "title", floors: 0, lock: 0, elapsed: 0 };
+  const stack = [];
+  let mover = null;
+  const playRoot = new THREE.Group();
+  scene.add(playRoot);
+
+  const guide = new THREE.Mesh(
+    box,
+    new THREE.MeshBasicMaterial({
+      color: 0xe6edf3,
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false
+    })
+  );
+  guide.visible = false;
+  playRoot.add(guide);
+
+  const desiredCam = new THREE.Vector3();
+  const lookTarget = new THREE.Vector3();
+
+  function colorFor(index) {
+    return PLAY_COLORS[index % PLAY_COLORS.length];
+  }
+
+  function topSlab() {
+    return stack[stack.length - 1];
+  }
+
+  function makeSlabMesh(w, d, hex, intensity) {
+    const mesh = new THREE.Mesh(box, slabMaterial(hex, intensity));
+    mesh.scale.set(w, THICK, d);
+    return mesh;
+  }
+
+  function spawnBase() {
+    const mesh = makeSlabMesh(BASE, BASE, colorFor(0), 0.55);
+    const y = THICK / 2;
+    mesh.position.set(0, y, 0);
+    playRoot.add(mesh);
+    stack.push({ mesh, x: 0, z: 0, w: BASE, d: BASE, y });
+  }
+
+  function spawnMover() {
+    const top = topSlab();
+    const hex = colorFor(stack.length);
+    const mesh = makeSlabMesh(top.w, top.d, hex, 1.05);
+    const span = 1.45 + top.w * 0.62;
+    mover = {
+      mesh,
+      axis: "x",
+      w: top.w,
+      d: top.d,
+      x: top.x - span,
+      z: top.z,
+      originX: top.x,
+      originZ: top.z,
+      span,
+      dir: 1,
+      speed: 2.4,
+      y: top.y + THICK
+    };
+    mesh.position.set(mover.x, mover.y, mover.z);
+    playRoot.add(mesh);
+    guide.visible = true;
+    guide.scale.set(mover.w, THICK * 0.07, mover.d);
+  }
+
+  function updateMover(dt) {
+    let next = mover.x + mover.dir * mover.speed * dt;
+    const min = mover.originX - mover.span;
+    const max = mover.originX + mover.span;
+    if (next > max) {
+      next = max;
+      mover.dir = -1;
+    } else if (next < min) {
+      next = min;
+      mover.dir = 1;
+    }
+    mover.x = next;
+    mover.mesh.position.set(mover.x, mover.y, mover.z);
+    const top = topSlab();
+    guide.position.set(mover.x, top.y + THICK * 0.54, mover.z);
+    guide.scale.set(mover.w, THICK * 0.07, mover.d);
+  }
+
+  function drop() {
+    if (state.mode !== "play" || !mover || state.lock > 0) return;
+    state.lock = 0.14;
+    const mesh = mover.mesh;
+    stack.push({
+      mesh,
+      x: mover.x,
+      z: mover.z,
+      w: mover.w,
+      d: mover.d,
+      y: mover.y
+    });
+    state.floors += 1;
+    mover = null;
+    spawnMover();
+  }
+
+  function startRun() {
+    if (state.mode === "play") return;
+    state.mode = "play";
+    state.floors = 0;
+    state.lock = 0.2;
+    const title = $("title");
+    const hint = $("hint");
+    const touch = $("touch");
+    if (title) title.classList.add("hidden");
+    if (hint) hint.classList.remove("hidden");
+    if (touch) touch.classList.add("show");
+    tower.visible = false;
+    spawnBase();
+    spawnMover();
+  }
+
   const startBtn = $("start");
-  if (startBtn) {
-    startBtn.addEventListener("click", () => {
-      const title = $("title");
-      if (title) title.classList.add("hidden");
-      closer = true;
+  if (startBtn) startBtn.addEventListener("click", startRun);
+  const dropBtn = $("dropBtn");
+  if (dropBtn) {
+    dropBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      drop();
     });
   }
+  canvas.addEventListener("pointerdown", () => {
+    if (state.mode === "play") drop();
+  });
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.code !== "Space" && e.code !== "Enter") return;
+    e.preventDefault();
+    if (state.mode === "title") startRun();
+    else drop();
+  });
 
   const clock = new THREE.Clock();
   let spin = 0.85;
@@ -237,18 +371,32 @@
     requestAnimationFrame(frame);
     const dt = Math.min(0.033, clock.getDelta());
     age += dt;
-    if (!reduceMotion) spin += dt * (closer ? 0.38 : 0.24);
+    state.elapsed += dt;
+    if (state.lock > 0) state.lock = Math.max(0, state.lock - dt);
+    if (!reduceMotion && state.mode === "title") spin += dt * 0.24;
 
-    preview.forEach((mesh) => {
-      const u = reduceMotion ? 1 : Math.min(1, Math.max(0, (age - mesh.userData.delay) / 0.42));
-      const ease = 1 - Math.pow(1 - u, 3);
-      mesh.position.y = mesh.userData.baseY + (1 - ease) * 2.4;
-    });
-
-    const dist = closer ? 6.6 : 9.6;
-    const lift = closer ? 3.5 : 5.2;
-    camera.position.set(Math.sin(spin) * dist, lift + Math.sin(spin * 0.7) * 0.25, Math.cos(spin) * dist);
-    camera.lookAt(0, 1.55, 0);
+    if (state.mode === "title") {
+      preview.forEach((mesh) => {
+        const u = reduceMotion ? 1 : Math.min(1, Math.max(0, (age - mesh.userData.delay) / 0.42));
+        const ease = 1 - Math.pow(1 - u, 3);
+        mesh.position.y = mesh.userData.baseY + (1 - ease) * 2.4;
+      });
+      const dist = 9.6;
+      const lift = 5.2;
+      camera.position.set(Math.sin(spin) * dist, lift + Math.sin(spin * 0.7) * 0.25, Math.cos(spin) * dist);
+      camera.lookAt(0, 1.55, 0);
+    } else if (mover) {
+      updateMover(dt);
+      const top = topSlab();
+      const yaw = reduceMotion ? 0.75 : 0.65 + state.elapsed * 0.08;
+      const dist = 7.6;
+      desiredCam.set(top.x + Math.sin(yaw) * dist, top.y + 5.35, top.z + Math.cos(yaw) * dist);
+      const blend = 1 - Math.exp(-2.8 * dt);
+      camera.position.lerp(desiredCam, blend);
+      lookTarget.set(top.x, top.y + 0.2, top.z);
+      camera.lookAt(lookTarget);
+      kiln.position.y = Math.max(0.35, top.y);
+    }
 
     if (!reduceMotion) {
       for (let i = 0; i < emberCount; i++) {

@@ -154,3 +154,47 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 }
 
 .fail a { color: var(--blue); }
+
+.hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 4;
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  text-shadow: 0 1px 8px #000;
+}
+
+#touch { display: none; }
+
+#dropBtn {
+  min-width: 148px;
+  min-height: 64px;
+  border-radius: 16px;
+  font-family: var(--mono);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+@media (pointer: coarse) {
+  #touch.show {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 5;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  #touch.show #dropBtn { pointer-events: auto; }
+
+  .hint { bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
