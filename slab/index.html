@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <title>Slab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="view" aria-label="Slab kiln"></canvas>
+  <div id="vignette"></div>
+  <a class="corner" href="../index.html">All games</a>
+
+  <section id="title" class="overlay">
+    <div class="card">
+      <p class="eyebrow">3D kiln</p>
+      <h1>Slab</h1>
+      <p class="sub">Glass tower</p>
+      <p class="lead">A stack of cooling glass on a dark kiln floor. The heat is still in the stone.</p>
+      <button id="start" type="button">Look closer</button>
+      <p class="credit"><a href="../index.html">All games</a></p>
+    </div>
+  </section>
+
+  <p id="fail" class="fail hidden">This browser has no WebGL context, so Slab cannot start. <a href="../index.html">All games</a></p>
+
+  <script src="../shared/vendor/three.min.js"></script>
+  <script src="../shared/bloom.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
