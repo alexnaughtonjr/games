@@ -221,9 +221,14 @@
   resize();
 
   const BASE = 3.05;
-  const state = { mode: "title", floors: 0, lock: 0, elapsed: 0 };
+  const PERFECT = 0.14;
+  const MIN_SIZE = 0.18;
+  const state = { mode: "title", floors: 0, embers: 0, lock: 0, elapsed: 0, overTimer: 0, callout: 0 };
   const stack = [];
+  const debris = [];
   let mover = null;
+  let ember = null;
+  const emberShape = new THREE.SphereGeometry(0.22, 18, 14);
   const playRoot = new THREE.Group();
   scene.add(playRoot);
 
@@ -264,84 +269,333 @@
     stack.push({ mesh, x: 0, z: 0, w: BASE, d: BASE, y });
   }
 
+  function overlap1D(centerA, sizeA, centerB, sizeB) {
+    const left = Math.max(centerA - sizeA / 2, centerB - sizeB / 2);
+    const right = Math.min(centerA + sizeA / 2, centerB + sizeB / 2);
+    const size = right - left;
+    if (size <= 0) return null;
+    return { center: (left + right) / 2, size };
+  }
+
+  function paintHint() {
+    const hint = $("hint");
+    if (!hint || state.mode !== "play") return;
+    const emberNote = ember && !ember.falling ? " · ember in play" : "";
+    hint.textContent = `Floor ${state.floors} · Space, click, or Drop${emberNote}`;
+  }
+
+  function showCallout(text) {
+    const el = $("callout");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove("hidden");
+    state.callout = 0.75;
+  }
+
+  function spawnOffcut(x, z, w, d, y, hex, axis, sign) {
+    if (w < 0.04 || d < 0.04) return;
+    const mesh = makeSlabMesh(w, d, hex, 0.75);
+    mesh.position.set(x, y, z);
+    playRoot.add(mesh);
+    debris.push({
+      mesh,
+      vy: 0.8,
+      vx: axis === "x" ? sign * 1.35 : 0,
+      vz: axis === "z" ? sign * 1.35 : 0,
+      life: 1.5
+    });
+  }
+
+  function updateDebris(dt) {
+    for (let i = debris.length - 1; i >= 0; i--) {
+      const piece = debris[i];
+      piece.vy -= 16 * dt;
+      piece.mesh.position.x += piece.vx * dt;
+      piece.mesh.position.y += piece.vy * dt;
+      piece.mesh.position.z += piece.vz * dt;
+      piece.mesh.rotation.x += dt * 1.2;
+      piece.mesh.rotation.z += dt * 0.8;
+      piece.life -= dt;
+      if (piece.life <= 0 || piece.mesh.position.y < -3) {
+        playRoot.remove(piece.mesh);
+        piece.mesh.material.dispose();
+        debris.splice(i, 1);
+      }
+    }
+  }
+
+  function clearEmber() {
+    if (!ember) return;
+    playRoot.remove(ember.mesh);
+    ember.mesh.material.dispose();
+    ember = null;
+  }
+
+  function spawnEmber(info) {
+    clearEmber();
+    const mesh = new THREE.Mesh(emberShape, slabMaterial(0xe3b341, 1.5));
+    const light = new THREE.PointLight(0xe3b341, 2.4, 5, 2);
+    mesh.add(light);
+    const sign = Math.random() < 0.5 ? -1 : 1;
+    const offset = sign * info.span * (0.38 + Math.random() * 0.22);
+    const x = info.axis === "x" ? info.originX + offset : info.originX;
+    const z = info.axis === "z" ? info.originZ + offset : info.originZ;
+    mesh.position.set(x, info.y, z);
+    playRoot.add(mesh);
+    ember = { mesh, x, z, y: info.y, falling: false, vy: 0 };
+  }
+
+  function updateEmber(dt) {
+    if (!ember) return;
+    if (!ember.falling) {
+      ember.mesh.position.y = ember.y + Math.sin(state.elapsed * 4.2) * 0.08;
+      return;
+    }
+    ember.vy -= 16 * dt;
+    ember.mesh.position.y += ember.vy * dt;
+    if (ember.mesh.position.y < -3) clearEmber();
+  }
+
+  function emberCaught(placed) {
+    if (!ember || ember.falling) return false;
+    return Math.abs(ember.x - placed.x) <= placed.w / 2 - 0.04
+      && Math.abs(ember.z - placed.z) <= placed.d / 2 - 0.04;
+  }
+
   function spawnMover() {
     const top = topSlab();
     const hex = colorFor(stack.length);
     const mesh = makeSlabMesh(top.w, top.d, hex, 1.05);
-    const span = 1.45 + top.w * 0.62;
+    const axis = state.floors % 2 === 0 ? "x" : "z";
+    const span = 1.55 + Math.max(top.w, top.d) * 0.72;
     mover = {
       mesh,
-      axis: "x",
+      axis,
+      hex,
       w: top.w,
       d: top.d,
-      x: top.x - span,
+      x: top.x,
       z: top.z,
       originX: top.x,
       originZ: top.z,
       span,
       dir: 1,
-      speed: 2.4,
-      y: top.y + THICK
+      speed: Math.min(7.4, 2.15 + state.floors * 0.14),
+      y: top.y + THICK,
+      falling: false,
+      vy: 0
     };
+    if (axis === "x") mover.x = top.x - span;
+    else mover.z = top.z - span;
     mesh.position.set(mover.x, mover.y, mover.z);
     playRoot.add(mesh);
     guide.visible = true;
     guide.scale.set(mover.w, THICK * 0.07, mover.d);
+    if (state.floors > 0 && state.floors % 3 === 0) spawnEmber(mover);
+    paintHint();
   }
 
   function updateMover(dt) {
-    let next = mover.x + mover.dir * mover.speed * dt;
-    const min = mover.originX - mover.span;
-    const max = mover.originX + mover.span;
-    if (next > max) {
-      next = max;
-      mover.dir = -1;
-    } else if (next < min) {
-      next = min;
-      mover.dir = 1;
+    if (!mover.falling) {
+      const axis = mover.axis;
+      const current = axis === "x" ? mover.x : mover.z;
+      const origin = axis === "x" ? mover.originX : mover.originZ;
+      let next = current + mover.dir * mover.speed * dt;
+      const min = origin - mover.span;
+      const max = origin + mover.span;
+      if (next > max) {
+        next = max;
+        mover.dir = -1;
+      } else if (next < min) {
+        next = min;
+        mover.dir = 1;
+      }
+      if (axis === "x") mover.x = next;
+      else mover.z = next;
+    } else {
+      mover.vy -= 16 * dt;
+      mover.y += mover.vy * dt;
+      mover.mesh.rotation.z += dt * (mover.axis === "x" ? 1.6 : 0.4);
+      mover.mesh.rotation.x += dt * (mover.axis === "z" ? 1.6 : 0.4);
     }
-    mover.x = next;
     mover.mesh.position.set(mover.x, mover.y, mover.z);
-    const top = topSlab();
-    guide.position.set(mover.x, top.y + THICK * 0.54, mover.z);
-    guide.scale.set(mover.w, THICK * 0.07, mover.d);
+    if (!mover.falling) {
+      const top = topSlab();
+      guide.position.set(mover.x, top.y + THICK * 0.54, mover.z);
+      guide.scale.set(mover.w, THICK * 0.07, mover.d);
+      guide.visible = true;
+    } else {
+      guide.visible = false;
+    }
+  }
+
+  function showEnd() {
+    state.mode = "over";
+    const floors = state.floors;
+    const floorWord = floors === 1 ? "floor" : "floors";
+    const emberBit = state.embers ? ` ${state.embers} ember${state.embers === 1 ? "" : "s"} caught.` : "";
+    const text = floors === 0
+      ? "The first slab missed the base."
+      : `The tower held ${floors} ${floorWord}.${emberBit}`;
+    const endText = $("endText");
+    if (endText) endText.textContent = text;
+    const end = $("end");
+    if (end) end.classList.remove("hidden");
+  }
+
+  function missRun() {
+    state.mode = "fall";
+    state.overTimer = 0.72;
+    guide.visible = false;
+    if (mover) {
+      mover.falling = true;
+      mover.vy = 0.4;
+    }
+    if (ember && !ember.falling) {
+      ember.falling = true;
+      ember.vy = 0.2;
+    }
+    const hint = $("hint");
+    const touch = $("touch");
+    if (hint) hint.classList.add("hidden");
+    if (touch) touch.classList.remove("show");
   }
 
   function drop() {
-    if (state.mode !== "play" || !mover || state.lock > 0) return;
-    state.lock = 0.14;
+    if (state.mode !== "play" || !mover || mover.falling || state.lock > 0) return;
+    state.lock = 0.12;
+    const top = topSlab();
+    const axis = mover.axis;
+    const delta = axis === "x" ? mover.x - top.x : mover.z - top.z;
+    const perfect = Math.abs(delta) <= PERFECT;
+    let x = top.x;
+    let z = top.z;
+    let w = top.w;
+    let d = top.d;
+
+    if (!perfect) {
+      if (axis === "x") {
+        const hit = overlap1D(mover.x, mover.w, top.x, top.w);
+        if (!hit || hit.size < MIN_SIZE) {
+          missRun();
+          return;
+        }
+        const overhang = mover.w - hit.size;
+        const sign = mover.x >= top.x ? 1 : -1;
+        spawnOffcut(
+          hit.center + sign * (hit.size / 2 + overhang / 2),
+          top.z,
+          overhang,
+          top.d,
+          mover.y,
+          mover.hex,
+          "x",
+          sign
+        );
+        x = hit.center;
+        w = hit.size;
+        z = top.z;
+        d = top.d;
+      } else {
+        const hit = overlap1D(mover.z, mover.d, top.z, top.d);
+        if (!hit || hit.size < MIN_SIZE) {
+          missRun();
+          return;
+        }
+        const overhang = mover.d - hit.size;
+        const sign = mover.z >= top.z ? 1 : -1;
+        spawnOffcut(
+          top.x,
+          hit.center + sign * (hit.size / 2 + overhang / 2),
+          top.w,
+          overhang,
+          mover.y,
+          mover.hex,
+          "z",
+          sign
+        );
+        x = top.x;
+        z = hit.center;
+        w = top.w;
+        d = hit.size;
+      }
+    }
+
     const mesh = mover.mesh;
-    stack.push({
-      mesh,
-      x: mover.x,
-      z: mover.z,
-      w: mover.w,
-      d: mover.d,
-      y: mover.y
-    });
+    mesh.scale.set(w, THICK, d);
+    mesh.position.set(x, mover.y, z);
+    const placed = { mesh, x, z, w, d, y: mover.y };
+    stack.push(placed);
     state.floors += 1;
+
+    const notes = [];
+    if (perfect) notes.push("Perfect");
+    if (emberCaught(placed)) {
+      state.embers += 1;
+      clearEmber();
+      notes.push("Ember");
+    } else if (ember && !ember.falling) {
+      ember.falling = true;
+      ember.vy = 0.3;
+    }
+    if (notes.length) showCallout(notes.join(" · "));
+
     mover = null;
     spawnMover();
   }
 
+  function clearPlay() {
+    clearEmber();
+    clearDebris();
+    if (mover) {
+      playRoot.remove(mover.mesh);
+      mover.mesh.material.dispose();
+      mover = null;
+    }
+    while (stack.length) {
+      const slab = stack.pop();
+      playRoot.remove(slab.mesh);
+      slab.mesh.material.dispose();
+    }
+    guide.visible = false;
+  }
+
+  function clearDebris() {
+    while (debris.length) {
+      const piece = debris.pop();
+      playRoot.remove(piece.mesh);
+      piece.mesh.material.dispose();
+    }
+  }
+
   function startRun() {
-    if (state.mode === "play") return;
+    if (state.mode === "play" || state.mode === "fall") return;
+    clearPlay();
     state.mode = "play";
     state.floors = 0;
+    state.embers = 0;
     state.lock = 0.2;
+    state.callout = 0;
     const title = $("title");
     const hint = $("hint");
     const touch = $("touch");
+    const end = $("end");
+    const callout = $("callout");
     if (title) title.classList.add("hidden");
+    if (end) end.classList.add("hidden");
+    if (callout) callout.classList.add("hidden");
     if (hint) hint.classList.remove("hidden");
     if (touch) touch.classList.add("show");
     tower.visible = false;
     spawnBase();
     spawnMover();
+    paintHint();
   }
 
   const startBtn = $("start");
   if (startBtn) startBtn.addEventListener("click", startRun);
+  const retryBtn = $("retry");
+  if (retryBtn) retryBtn.addEventListener("click", startRun);
   const dropBtn = $("dropBtn");
   if (dropBtn) {
     dropBtn.addEventListener("pointerdown", (e) => {
@@ -359,8 +613,8 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.code !== "Space" && e.code !== "Enter") return;
     e.preventDefault();
-    if (state.mode === "title") startRun();
-    else drop();
+    if (state.mode === "title" || state.mode === "over") startRun();
+    else if (state.mode === "play") drop();
   });
 
   const clock = new THREE.Clock();
@@ -373,6 +627,19 @@
     age += dt;
     state.elapsed += dt;
     if (state.lock > 0) state.lock = Math.max(0, state.lock - dt);
+    if (state.callout > 0) {
+      state.callout -= dt;
+      if (state.callout <= 0) {
+        const callout = $("callout");
+        if (callout) callout.classList.add("hidden");
+      }
+    }
+    if (state.mode === "fall") {
+      state.overTimer -= dt;
+      if (state.overTimer <= 0) showEnd();
+    }
+    updateDebris(dt);
+    updateEmber(dt);
     if (!reduceMotion && state.mode === "title") spin += dt * 0.24;
 
     if (state.mode === "title") {
@@ -385,15 +652,14 @@
       const lift = 5.2;
       camera.position.set(Math.sin(spin) * dist, lift + Math.sin(spin * 0.7) * 0.25, Math.cos(spin) * dist);
       camera.lookAt(0, 1.55, 0);
-    } else if (mover) {
-      updateMover(dt);
+    } else if (stack.length) {
+      if (mover) updateMover(dt);
       const top = topSlab();
-      const yaw = reduceMotion ? 0.75 : 0.65 + state.elapsed * 0.08;
-      const dist = 7.6;
-      desiredCam.set(top.x + Math.sin(yaw) * dist, top.y + 5.35, top.z + Math.cos(yaw) * dist);
+      const focusY = mover ? mover.y : top.y;
+      desiredCam.set(top.x + 6.5, focusY + 6.5, top.z + 7.3);
       const blend = 1 - Math.exp(-2.8 * dt);
       camera.position.lerp(desiredCam, blend);
-      lookTarget.set(top.x, top.y + 0.2, top.z);
+      lookTarget.set(top.x, focusY - 0.35, top.z);
       camera.lookAt(lookTarget);
       kiln.position.y = Math.max(0.35, top.y);
     }
