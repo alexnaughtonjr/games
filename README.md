@@ -13,7 +13,7 @@ git clone https://github.com/alexnaughtonjr/games.git
 cd games
 ```
 
-Then open `index.html`, or one of the game pages below. On the collection page, press 1–5 to open Snake, Memory Match, Vibe Coder, Rainline, or Uplink. Vibe Coder, Rainline, and Uplink link back to that page.
+Then open `index.html`, or one of the game pages below. On the collection page, press 1–6 to open Snake, Memory Match, Vibe Coder, Rainline, Uplink, or Slab. Vibe Coder, Rainline, Uplink, and Slab link back to that page.
 
 ## Snake
 
@@ -79,6 +79,20 @@ WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.
 - `P` or `Esc` pauses. Blue beacons save a checkpoint. The best score stays in this browser (`games.uplink.best`).
 - Open `uplink/index.html` directly, or visit it from the collection.
 
+## Slab
+
+`slab/index.html`
+
+A 3D kiln stack. A glass slab slides across the tower. Drop it and only the overlap stays. A clean miss ends the run. The slab alternates between the side axis and the depth axis, and it speeds up as the tower grows. Land almost flush and the cut is forgiven, which builds a streak. Every third floor, an amber ember hangs in the drop lane. Cover it with the slab for extra points.
+
+WebGL is required. Three.js is the shared vendored copy at `shared/vendor/three.min.js`. Bloom is `shared/bloom.js`, and the drop sounds come from `shared/juice.js`. Play does not call a CDN and there is no build step. A soft bloom and a warm kiln light sit under the glass.
+
+- Space, click, or tap drops the slab. On a touch screen, tap the kiln or the Drop button. The pale mark shows where the slab will land.
+- Each floor is 10 points. A perfect land adds 15 points times the streak. An ember is 50.
+- `P` or `Esc` pauses. `R` starts a fresh tower.
+- The best score stays in this browser (`games.slab.best`).
+- Open `slab/index.html` directly, or visit it from the collection.
+
 ## Theme
 
 Pages use the GitHub Primer dark palette:
@@ -88,8 +102,8 @@ Pages use the GitHub Primer dark palette:
 - Green accent `#238636`
 - Blue accent `#58a6ff`
 
-Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Snake, Memory Match, Rainline, and Uplink do not download fonts. Vibe Coder requests Inter and JetBrains Mono from Google Fonts and falls back to that same stack.
+Body text uses Inter, then the system UI stack. Titles, scores, and labels use JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace. Snake, Memory Match, Rainline, Uplink, and Slab do not download fonts. Vibe Coder requests Inter and JetBrains Mono from Google Fonts and falls back to that same stack.
 
 ## GitHub Pages
 
-`.github/workflows/pages.yml` publishes the repository root on every push to `main`. When Pages is enabled with GitHub Actions as the source, the collection is at `https://alexnaughtonjr.github.io/games/` and Rainline is at `https://alexnaughtonjr.github.io/games/rainline/`.
+`.github/workflows/pages.yml` publishes the repository root on every push to `main`. When Pages is enabled with GitHub Actions as the source, the collection is at `https://alexnaughtonjr.github.io/games/` and Slab is at `https://alexnaughtonjr.github.io/games/slab/`.

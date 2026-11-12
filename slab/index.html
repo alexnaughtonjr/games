@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <title>Slab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="view" aria-label="Slab kiln"></canvas>
+  <div id="vignette"></div>
+  <a id="home" class="corner" href="../index.html">All games</a>
+
+  <header id="hud" hidden>
+    <div class="brand">slab <span>/ kiln</span></div>
+    <div class="meters">
+      <span>score <b id="score">0</b></span>
+      <span>best <b id="best">0</b></span>
+      <span>floors <b id="floors">0</b></span>
+      <span>streak <b id="streak">0</b></span>
+    </div>
+    <button id="pauseBtn" class="ghost" type="button" aria-pressed="false">Pause</button>
+  </header>
+
+  <section id="title" class="overlay">
+    <div class="card">
+      <p class="eyebrow">3D kiln</p>
+      <h1>Slab</h1>
+      <p class="sub">Glass tower</p>
+      <p class="lead">Line the sliding slab up with the tower. Only the overlap stays, and a clean miss ends the run. Amber embers show up every few floors.</p>
+      <ul class="howto">
+        <li>Space, click, or Drop sets the slab down. On a touch screen, tap the kiln or the Drop button.</li>
+        <li>The slab slides side to side, then front to back. The pale mark shows where it will land.</li>
+        <li>Hang-off glass is cut away. Land almost flush and the tower keeps its full size.</li>
+        <li>Cover an amber ember with the slab to catch it.</li>
+        <li><kbd>P</kbd> pauses. <kbd>R</kbd> starts a fresh tower. The best score stays in this browser.</li>
+      </ul>
+      <button id="start" type="button">Start stacking</button>
+      <p id="titleBest" class="credit">Best score saves in this browser.</p>
+      <p class="credit"><a href="../index.html">All games</a></p>
+    </div>
+  </section>
+
+  <p id="hint" class="hint hidden">Floor 0 · Space, click, or Drop</p>
+  <p id="callout" class="callout hidden">Perfect</p>
+  <div id="touch">
+    <button id="dropBtn" type="button">Drop</button>
+  </div>
+
+  <section id="pause" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow">paused</p>
+      <h1>Kiln held</h1>
+      <p class="lead">The slab is frozen. Resume the drop, or start a fresh tower.</p>
+      <div class="pause-actions">
+        <button id="resume" type="button">Resume</button>
+        <button id="restart" class="ghost" type="button">Restart</button>
+        <a href="../index.html">All games</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="end" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow">kiln cracked</p>
+      <h1>Missed</h1>
+      <p class="lead" id="endText"></p>
+      <p class="scoreline" id="endScore"></p>
+      <button id="retry" type="button">Stack again</button>
+      <p class="credit"><a href="../index.html">All games</a></p>
+    </div>
+  </section>
+
+  <p id="fail" class="fail hidden">This browser has no WebGL context, so Slab cannot start. <a href="../index.html">All games</a></p>
+
+  <script src="../shared/vendor/three.min.js"></script>
+  <script src="../shared/bloom.js"></script>
+  <script src="../shared/juice.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
