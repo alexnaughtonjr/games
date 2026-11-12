@@ -2,6 +2,24 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
+  const HIGH_KEY = "games.slab.best";
+
+  function readBest() {
+    try {
+      const n = Number(localStorage.getItem(HIGH_KEY));
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  function writeBest(n) {
+    try {
+      localStorage.setItem(HIGH_KEY, String(n));
+    } catch (err) {
+      /* Private mode can block storage. The run still finishes. */
+    }
+  }
 
   function showFail() {
     const fail = $("fail");
@@ -223,7 +241,19 @@
   const BASE = 3.05;
   const PERFECT = 0.14;
   const MIN_SIZE = 0.18;
-  const state = { mode: "title", floors: 0, embers: 0, lock: 0, elapsed: 0, overTimer: 0, callout: 0 };
+  const state = {
+    mode: "title",
+    floors: 0,
+    embers: 0,
+    combo: 0,
+    score: 0,
+    best: readBest(),
+    lock: 0,
+    elapsed: 0,
+    overTimer: 0,
+    callout: 0,
+    shake: 0
+  };
   const stack = [];
   const debris = [];
   let mover = null;
@@ -243,6 +273,170 @@
   );
   guide.visible = false;
   playRoot.add(guide);
+
+  const sparkGeo = new THREE.BoxGeometry(0.09, 0.09, 0.09);
+  const sparks = [];
+  for (let i = 0; i < 40; i++) {
+    const mesh = new THREE.Mesh(
+      sparkGeo,
+      new THREE.MeshBasicMaterial({
+        color: 0x7ee787,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        toneMapped: false
+      })
+    );
+    mesh.visible = false;
+    playRoot.add(mesh);
+    sparks.push({ mesh, vx: 0, vy: 0, vz: 0, life: 0 });
+  }
+
+  const trails = [];
+  for (let i = 0; i < 8; i++) {
+    const mesh = new THREE.Mesh(
+      box,
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        toneMapped: false
+      })
+    );
+    mesh.visible = false;
+    playRoot.add(mesh);
+    trails.push({ mesh, life: 0 });
+  }
+  let trailTick = 0;
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1, 0.035, 8, 40),
+    new THREE.MeshBasicMaterial({
+      color: 0x7ee787,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      toneMapped: false
+    })
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.visible = false;
+  playRoot.add(ring);
+  let ringLife = 0;
+
+  function tone(name) {
+    try {
+      const fx = window.LabFX && window.LabFX.sfx;
+      if (!fx) return;
+      if (name === "pop") fx.pop();
+      else if (name === "perfect") fx.orb(Math.max(1, state.combo));
+      else if (name === "ember") fx.boost();
+      else if (name === "bad") fx.bad();
+    } catch (err) {
+      /* Audio can fail before a gesture. The drop still counts. */
+    }
+  }
+
+  function buzz(pattern) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch (err) {
+      /* Some browsers reject vibration outside a gesture. */
+    }
+  }
+
+  function addShake(amount) {
+    if (reduceMotion) return;
+    state.shake = Math.min(1.2, state.shake + amount);
+  }
+
+  function burst(x, y, z, color, count, speed) {
+    let left = count;
+    for (let i = 0; i < sparks.length && left > 0; i++) {
+      const spark = sparks[i];
+      if (spark.life > 0) continue;
+      spark.life = 0.32 + Math.random() * 0.28;
+      spark.mesh.visible = true;
+      spark.mesh.material.color.set(color);
+      spark.mesh.material.opacity = 1;
+      spark.mesh.position.set(x, y, z);
+      const yaw = Math.random() * Math.PI * 2;
+      const pitch = Math.random() * Math.PI;
+      const mag = speed * (0.45 + Math.random() * 0.7);
+      spark.vx = Math.sin(pitch) * Math.cos(yaw) * mag;
+      spark.vy = Math.abs(Math.cos(pitch)) * mag + 0.6;
+      spark.vz = Math.sin(pitch) * Math.sin(yaw) * mag;
+      left -= 1;
+    }
+  }
+
+  function updateSparks(dt) {
+    for (let i = 0; i < sparks.length; i++) {
+      const spark = sparks[i];
+      if (spark.life <= 0) continue;
+      spark.life -= dt;
+      spark.vy -= 7 * dt;
+      spark.mesh.position.x += spark.vx * dt;
+      spark.mesh.position.y += spark.vy * dt;
+      spark.mesh.position.z += spark.vz * dt;
+      spark.mesh.material.opacity = Math.max(0, spark.life * 2.2);
+      if (spark.life <= 0) spark.mesh.visible = false;
+    }
+  }
+
+  function updateTrail(dt) {
+    if (state.mode === "play" && mover && !mover.falling && !reduceMotion) {
+      trailTick -= dt;
+      if (trailTick <= 0) {
+        trailTick = 0.055;
+        const slot = trails.find((item) => item.life <= 0);
+        if (slot) {
+          slot.life = 0.26;
+          slot.mesh.visible = true;
+          slot.mesh.position.set(mover.x, mover.y, mover.z);
+          slot.mesh.scale.set(mover.w * 0.98, THICK * 0.92, mover.d * 0.98);
+          slot.mesh.material.color.copy(mover.mesh.material.emissive);
+          slot.mesh.material.opacity = 0.28;
+        }
+      }
+    }
+    for (let i = 0; i < trails.length; i++) {
+      const slot = trails[i];
+      if (slot.life <= 0) continue;
+      slot.life -= dt;
+      slot.mesh.material.opacity = Math.max(0, slot.life * 0.9);
+      if (slot.life <= 0) slot.mesh.visible = false;
+    }
+  }
+
+  function pulseRing(x, y, z, radius) {
+    ring.position.set(x, y, z);
+    ring.userData.base = Math.max(0.4, radius);
+    ring.scale.setScalar(ring.userData.base);
+    ring.visible = true;
+    ringLife = 0.42;
+    ring.material.opacity = 0.95;
+  }
+
+  function updateRing(dt) {
+    if (ringLife <= 0) return;
+    ringLife -= dt;
+    const grow = 1 + (0.42 - ringLife) * 1.8;
+    ring.scale.setScalar((ring.userData.base || 1) * grow);
+    ring.material.opacity = Math.max(0, ringLife * 2);
+    if (ringLife <= 0) ring.visible = false;
+  }
+
+  function hideJuice() {
+    ring.visible = false;
+    ringLife = 0;
+    state.shake = 0;
+    for (let i = 0; i < trails.length; i++) {
+      trails[i].life = 0;
+      trails[i].mesh.visible = false;
+    }
+  }
 
   const desiredCam = new THREE.Vector3();
   const lookTarget = new THREE.Vector3();
@@ -280,8 +474,27 @@
   function paintHint() {
     const hint = $("hint");
     if (!hint || state.mode !== "play") return;
-    const emberNote = ember && !ember.falling ? " · ember in play" : "";
-    hint.textContent = `Floor ${state.floors} · Space, click, or Drop${emberNote}`;
+    hint.textContent = ember && !ember.falling
+      ? "Ember in play · Space, click, or Drop"
+      : "Space, click, or Drop";
+  }
+
+  function paintHud() {
+    const score = $("score");
+    const best = $("best");
+    const floors = $("floors");
+    const streak = $("streak");
+    if (score) score.textContent = String(state.score);
+    if (best) best.textContent = String(state.best);
+    if (floors) floors.textContent = String(state.floors);
+    if (streak) streak.textContent = String(state.combo);
+  }
+
+  function showRunChrome(on) {
+    const hud = $("hud");
+    const home = $("home");
+    if (hud) hud.hidden = !on;
+    if (home) home.hidden = on;
   }
 
   function showCallout(text) {
@@ -296,7 +509,9 @@
     if (w < 0.04 || d < 0.04) return;
     const mesh = makeSlabMesh(w, d, hex, 0.75);
     mesh.position.set(x, y, z);
+    mesh.material.transparent = true;
     playRoot.add(mesh);
+    burst(x, y, z, hex, 10, 2.1);
     debris.push({
       mesh,
       vy: 0.8,
@@ -316,6 +531,7 @@
       piece.mesh.rotation.x += dt * 1.2;
       piece.mesh.rotation.z += dt * 0.8;
       piece.life -= dt;
+      piece.mesh.material.opacity = Math.max(0, piece.life / 1.5);
       if (piece.life <= 0 || piece.mesh.position.y < -3) {
         playRoot.remove(piece.mesh);
         piece.mesh.material.dispose();
@@ -439,6 +655,13 @@
       : `The tower held ${floors} ${floorWord}.${emberBit}`;
     const endText = $("endText");
     if (endText) endText.textContent = text;
+    if (state.score > state.best) {
+      state.best = state.score;
+      writeBest(state.best);
+    }
+    const endScore = $("endScore");
+    if (endScore) endScore.textContent = `Score ${state.score} · best ${state.best}`;
+    paintHud();
     const end = $("end");
     if (end) end.classList.remove("hidden");
   }
@@ -459,6 +682,11 @@
     const touch = $("touch");
     if (hint) hint.classList.add("hidden");
     if (touch) touch.classList.remove("show");
+    state.combo = 0;
+    addShake(0.9);
+    tone("bad");
+    buzz(46);
+    if (mover) burst(mover.x, mover.y, mover.z, 0xf85149, 18, 3.4);
   }
 
   function drop() {
@@ -529,17 +757,36 @@
     state.floors += 1;
 
     const notes = [];
-    if (perfect) notes.push("Perfect");
+    if (perfect) {
+      state.combo += 1;
+      notes.push(state.combo > 1 ? `Perfect x${state.combo}` : "Perfect");
+      mesh.material.emissiveIntensity = 1.7;
+      burst(x, mover.y, z, 0x7ee787, 16, 2.5);
+      pulseRing(x, mover.y, z, Math.max(w, d) * 0.52);
+      addShake(0.16);
+      tone("perfect");
+      buzz([12, 28, 16]);
+    } else {
+      state.combo = 0;
+      addShake(0.22);
+      tone("pop");
+      buzz(10);
+    }
     if (emberCaught(placed)) {
       state.embers += 1;
+      burst(ember.x, ember.y, ember.z, 0xe3b341, 20, 3);
       clearEmber();
       notes.push("Ember");
+      tone("ember");
+      addShake(0.28);
     } else if (ember && !ember.falling) {
       ember.falling = true;
       ember.vy = 0.3;
     }
     if (notes.length) showCallout(notes.join(" · "));
 
+    state.score += 10 + (perfect ? 15 * state.combo : 0) + (notes.indexOf("Ember") >= 0 ? 50 : 0);
+    paintHud();
     mover = null;
     spawnMover();
   }
@@ -558,6 +805,7 @@
       slab.mesh.material.dispose();
     }
     guide.visible = false;
+    hideJuice();
   }
 
   function clearDebris() {
@@ -574,6 +822,9 @@
     state.mode = "play";
     state.floors = 0;
     state.embers = 0;
+    state.combo = 0;
+    state.score = 0;
+    state.shake = 0;
     state.lock = 0.2;
     state.callout = 0;
     const title = $("title");
@@ -586,16 +837,69 @@
     if (callout) callout.classList.add("hidden");
     if (hint) hint.classList.remove("hidden");
     if (touch) touch.classList.add("show");
+    const pause = $("pause");
+    if (pause) pause.classList.add("hidden");
+    const pauseBtn = $("pauseBtn");
+    if (pauseBtn) {
+      pauseBtn.textContent = "Pause";
+      pauseBtn.setAttribute("aria-pressed", "false");
+    }
     tower.visible = false;
+    showRunChrome(true);
     spawnBase();
     spawnMover();
     paintHint();
+    paintHud();
+  }
+
+  function togglePause() {
+    const card = $("pause");
+    const pauseBtn = $("pauseBtn");
+    const hint = $("hint");
+    const touch = $("touch");
+    if (state.mode === "play") {
+      state.mode = "pause";
+      if (card) card.classList.remove("hidden");
+      if (hint) hint.classList.add("hidden");
+      if (touch) touch.classList.remove("show");
+      if (pauseBtn) {
+        pauseBtn.textContent = "Resume";
+        pauseBtn.setAttribute("aria-pressed", "true");
+      }
+      return;
+    }
+    if (state.mode === "pause") {
+      state.mode = "play";
+      if (card) card.classList.add("hidden");
+      if (hint) hint.classList.remove("hidden");
+      if (touch) touch.classList.add("show");
+      if (pauseBtn) {
+        pauseBtn.textContent = "Pause";
+        pauseBtn.setAttribute("aria-pressed", "false");
+      }
+    }
+  }
+
+  function restartRun() {
+    if (state.mode === "fall") return;
+    if (state.mode === "title") {
+      startRun();
+      return;
+    }
+    state.mode = "over";
+    startRun();
   }
 
   const startBtn = $("start");
   if (startBtn) startBtn.addEventListener("click", startRun);
   const retryBtn = $("retry");
   if (retryBtn) retryBtn.addEventListener("click", startRun);
+  const pauseBtn = $("pauseBtn");
+  if (pauseBtn) pauseBtn.addEventListener("click", togglePause);
+  const resumeBtn = $("resume");
+  if (resumeBtn) resumeBtn.addEventListener("click", togglePause);
+  const restartBtn = $("restart");
+  if (restartBtn) restartBtn.addEventListener("click", restartRun);
   const dropBtn = $("dropBtn");
   if (dropBtn) {
     dropBtn.addEventListener("pointerdown", (e) => {
@@ -611,11 +915,27 @@
   document.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.code === "KeyP" || e.code === "Escape") {
+      if (state.mode === "play" || state.mode === "pause") {
+        e.preventDefault();
+        togglePause();
+      }
+      return;
+    }
+    if (e.code === "KeyR") {
+      e.preventDefault();
+      restartRun();
+      return;
+    }
     if (e.code !== "Space" && e.code !== "Enter") return;
     e.preventDefault();
     if (state.mode === "title" || state.mode === "over") startRun();
     else if (state.mode === "play") drop();
   });
+
+  const titleBest = $("titleBest");
+  if (titleBest && state.best > 0) titleBest.textContent = `Best ${state.best}`;
+  paintHud();
 
   const clock = new THREE.Clock();
   let spin = 0.85;
@@ -638,8 +958,14 @@
       state.overTimer -= dt;
       if (state.overTimer <= 0) showEnd();
     }
-    updateDebris(dt);
-    updateEmber(dt);
+    if (state.mode !== "pause") {
+      updateDebris(dt);
+      updateEmber(dt);
+      updateSparks(dt);
+      updateTrail(dt);
+      updateRing(dt);
+    }
+    if (state.shake > 0) state.shake *= Math.exp(-3.6 * dt);
     if (!reduceMotion && state.mode === "title") spin += dt * 0.24;
 
     if (state.mode === "title") {
@@ -653,14 +979,27 @@
       camera.position.set(Math.sin(spin) * dist, lift + Math.sin(spin * 0.7) * 0.25, Math.cos(spin) * dist);
       camera.lookAt(0, 1.55, 0);
     } else if (stack.length) {
-      if (mover) updateMover(dt);
+      if (mover && state.mode !== "pause") updateMover(dt);
       const top = topSlab();
       const focusY = mover ? mover.y : top.y;
-      desiredCam.set(top.x + 6.5, focusY + 6.5, top.z + 7.3);
+      const portrait = camera.aspect < 0.95;
+      const wantFov = portrait ? 64 : 42;
+      if (Math.abs(camera.fov - wantFov) > 0.1) {
+        camera.fov = wantFov;
+        camera.updateProjectionMatrix();
+      }
+      const back = portrait ? 12.2 : 6.5;
+      const lift = portrait ? 13.2 : 6.5;
+      desiredCam.set(top.x + back, focusY + lift, top.z + back);
       const blend = 1 - Math.exp(-2.8 * dt);
       camera.position.lerp(desiredCam, blend);
-      lookTarget.set(top.x, focusY - 0.35, top.z);
+      lookTarget.set(top.x, focusY - (portrait ? 0.6 : 0.35), top.z);
       camera.lookAt(lookTarget);
+      if (state.shake > 0.004) {
+        const kick = state.shake * state.shake * 0.55;
+        camera.position.x += (Math.random() - 0.5) * kick;
+        camera.position.y += (Math.random() - 0.5) * kick * 0.65;
+      }
       kiln.position.y = Math.max(0.35, top.y);
     }
 

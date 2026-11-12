@@ -11,7 +11,18 @@
 <body>
   <canvas id="view" aria-label="Slab kiln"></canvas>
   <div id="vignette"></div>
-  <a class="corner" href="../index.html">All games</a>
+  <a id="home" class="corner" href="../index.html">All games</a>
+
+  <header id="hud" hidden>
+    <div class="brand">slab <span>/ kiln</span></div>
+    <div class="meters">
+      <span>score <b id="score">0</b></span>
+      <span>best <b id="best">0</b></span>
+      <span>floors <b id="floors">0</b></span>
+      <span>streak <b id="streak">0</b></span>
+    </div>
+    <button id="pauseBtn" class="ghost" type="button" aria-pressed="false">Pause</button>
+  </header>
 
   <section id="title" class="overlay">
     <div class="card">
@@ -24,8 +35,10 @@
         <li>The slab slides side to side, then front to back. The pale mark shows where it will land.</li>
         <li>Hang-off glass is cut away. Land almost flush and the tower keeps its full size.</li>
         <li>Cover an amber ember with the slab to catch it.</li>
+        <li><kbd>P</kbd> pauses. <kbd>R</kbd> starts a fresh tower. The best score stays in this browser.</li>
       </ul>
       <button id="start" type="button">Start stacking</button>
+      <p id="titleBest" class="credit">Best score saves in this browser.</p>
       <p class="credit"><a href="../index.html">All games</a></p>
     </div>
   </section>
@@ -36,11 +49,25 @@
     <button id="dropBtn" type="button">Drop</button>
   </div>
 
+  <section id="pause" class="overlay hidden">
+    <div class="card">
+      <p class="eyebrow">paused</p>
+      <h1>Kiln held</h1>
+      <p class="lead">The slab is frozen. Resume the drop, or start a fresh tower.</p>
+      <div class="pause-actions">
+        <button id="resume" type="button">Resume</button>
+        <button id="restart" class="ghost" type="button">Restart</button>
+        <a href="../index.html">All games</a>
+      </div>
+    </div>
+  </section>
+
   <section id="end" class="overlay hidden">
     <div class="card">
       <p class="eyebrow">kiln cracked</p>
       <h1>Missed</h1>
       <p class="lead" id="endText"></p>
+      <p class="scoreline" id="endScore"></p>
       <button id="retry" type="button">Stack again</button>
       <p class="credit"><a href="../index.html">All games</a></p>
     </div>
@@ -50,6 +77,7 @@
 
   <script src="../shared/vendor/three.min.js"></script>
   <script src="../shared/bloom.js"></script>
+  <script src="../shared/juice.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

@@ -165,6 +165,88 @@ button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 
 .credit a { color: var(--blue); }
 
+kbd {
+  display: inline-block;
+  min-width: 1.3em;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: center;
+}
+
+#hud {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(10px + env(safe-area-inset-left));
+  right: calc(10px + env(safe-area-inset-right));
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(22, 27, 34, 0.84);
+  font-family: var(--mono);
+}
+
+#hud[hidden] { display: none; }
+
+.brand { font-weight: 700; }
+.brand span { color: var(--muted); font-weight: 500; }
+
+.meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.meters b {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+button.ghost:hover { background: #1c2128; }
+
+.pause-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pause-actions a {
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.scoreline {
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 18px;
+}
+
 .fail {
   position: fixed;
   left: 16px;
