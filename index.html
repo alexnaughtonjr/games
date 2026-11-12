@@ -234,8 +234,23 @@
           <span class="play">Play</span>
         </a>
       </li>
+      <li>
+        <a href="slab/index.html" aria-keyshortcuts="6">
+          <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+            <rect x="5" y="23" width="26" height="6" rx="1" fill="#238636"/>
+            <rect x="8" y="17" width="20" height="6" rx="1" fill="#3fb950"/>
+            <rect x="11" y="11" width="15" height="6" rx="1" fill="#58a6ff"/>
+            <rect x="7" y="6" width="13" height="5" rx="1" fill="#79c0ff"/>
+            <circle cx="28" cy="8" r="2.2" fill="#d29922"/>
+          </svg>
+          <h2>Slab</h2>
+          <p>Drop glowing slabs in a 3D kiln. Keep the overlap, catch embers, and beat the best score saved in this browser.</p>
+          <span class="req"><kbd>6</kbd>WebGL</span>
+          <span class="play">Play</span>
+        </a>
+      </li>
     </ul>
-    <footer>Press 1–5 to open a game. Primer dark · #0d1117 / #161b22 · #238636 · #58a6ff</footer>
+    <footer>Press 1–6 to open a game. Primer dark · #0d1117 / #161b22 · #238636 · #58a6ff</footer>
   </main>
   <script>
     const jumps = {
@@ -243,7 +258,8 @@
       "2": "games/memory/index.html",
       "3": "vibe-coder/index.html",
       "4": "rainline/index.html",
-      "5": "uplink/index.html"
+      "5": "uplink/index.html",
+      "6": "slab/index.html"
     };
     document.addEventListener("keydown", (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
