@@ -1150,6 +1150,11 @@
     smoke.life = 0;
     smoke.cd = 0;
     smoke.mesh.visible = false;
+    kits.forEach((k) => {
+      k.taken = false;
+      k.mesh.visible = true;
+      k.mesh.position.y = k.baseY;
+    });
     leap = null;
     grapple = null;
     enemies.forEach((e, i) => {
@@ -1513,6 +1518,15 @@
       if (k.taken) continue;
       k.mesh.rotation.y += dt * 1.6;
       k.mesh.position.y = k.baseY + Math.sin(time * 2.4 + k.phase) * 0.07;
+      if (!started || mode !== "play" || player.hp >= MAX_HP) continue;
+      if (Math.abs(player.pos.y - (k.baseY - 0.62)) > 1.3) continue;
+      if (flatDist(player.pos, k.mesh.position) > 1.15) continue;
+      k.taken = true;
+      k.mesh.visible = false;
+      player.hp = Math.min(MAX_HP, player.hp + KIT_HEAL);
+      burst(k.mesh.position.x, k.baseY, k.mesh.position.z, 0x3fb950, 0.45);
+      spawnSplash(k.mesh.position.x, k.baseY - 0.62, k.mesh.position.z);
+      blip(520, 0.12, "sine", 0.04, 780);
     }
   }
 
