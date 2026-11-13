@@ -38,6 +38,12 @@
   const COMBO_NEED = 5;
   const DISC_CD = 4.5;
   const SMOKE_CD = 7;
+  const KIT_HEAL = 36;
+  const KIT_SPOTS = [
+    { x: -3.4, z: 4.8 },
+    { x: 7.2, z: -6.6 },
+    { x: -8.5, z: -10.2 },
+  ];
 
   const keys = {};
   const cam = { yaw: Math.PI / 2, pitch: -0.16, dist: 6.4 };
@@ -63,6 +69,7 @@
   let solids = [];
   let hero;
   let enemies = [];
+  let kits = [];
   let grapples = [];
   let targetGrapple = null;
   let mode = "title";
@@ -353,6 +360,7 @@
     addGrapple(20, 2);
     addGrapple(0, 18);
     addGrapple(0.4, 0.2);
+    buildKits();
 
     buildGargoyle();
     buildSkyline(winCanvas);
@@ -521,6 +529,36 @@
     pole.receiveShadow = true;
     scene.add(pole);
     grapples.push(ring);
+  }
+
+  function buildKits() {
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x0d1117,
+      emissive: 0x3fb950,
+      emissiveIntensity: 1.5,
+      roughness: 0.32,
+      metalness: 0.45,
+    });
+    const capMat = new THREE.MeshStandardMaterial({
+      color: 0x3fb950,
+      emissive: 0x3fb950,
+      emissiveIntensity: 2.6,
+      roughness: 0.28,
+      metalness: 0.2,
+    });
+    KIT_SPOTS.forEach((spot, i) => {
+      const y = groundHeight(spot.x, spot.z);
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.32, 10), bodyMat);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 10), capMat);
+      cap.position.y = 0.18;
+      const glow = new THREE.PointLight(0x3fb950, 1.15, 4.2, 2);
+      glow.position.y = 0.2;
+      group.add(body, cap, glow);
+      group.position.set(spot.x, y + 0.62, spot.z);
+      scene.add(group);
+      kits.push({ mesh: group, baseY: y + 0.62, taken: false, phase: i * 2.1 });
+    });
   }
 
   function buildGargoyle() {
@@ -1269,6 +1307,7 @@
       updateSmoke(dt);
     }
     updateEnemies(dt);
+    updateKits(dt);
     updateAmbience(dt);
     poseHero(dt);
     poseEnemies(dt);
@@ -1466,6 +1505,15 @@
     e.pos.x = nx;
     e.pos.z = nz;
     e.pos.y = h;
+  }
+
+  function updateKits(dt) {
+    for (let i = 0; i < kits.length; i++) {
+      const k = kits[i];
+      if (k.taken) continue;
+      k.mesh.rotation.y += dt * 1.6;
+      k.mesh.position.y = k.baseY + Math.sin(time * 2.4 + k.phase) * 0.07;
+    }
   }
 
   function updateDisc(dt) {
