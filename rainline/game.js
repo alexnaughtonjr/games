@@ -14,6 +14,7 @@
   const comboN = document.getElementById("comboN");
   const alertEl = document.getElementById("alert");
   const remainEl = document.getElementById("remain");
+  const kitsEl = document.getElementById("kits");
   const cdDisc = document.getElementById("cdDisc");
   const cdSmoke = document.getElementById("cdSmoke");
 
@@ -1969,6 +1970,10 @@
     comboBar.style.transform = "scaleX(" + Math.min(1, player.combo / COMBO_NEED) + ")";
     comboN.textContent = "x" + player.combo;
     remainEl.textContent = living + " left";
+    if (kitsEl) {
+      const left = kits.filter((k) => !k.taken).length;
+      kitsEl.textContent = left + (left === 1 ? " kit" : " kits");
+    }
     const alert = enemies.some((e) => !e.dead && (e.state === "chase" || e.state === "telegraph"));
     alertEl.textContent = alert ? "alert" : "hidden";
     alertEl.className = alert ? "on" : "off";
@@ -1995,6 +2000,7 @@
     if (mode === "grapple") return "Grappling";
     if (mode === "leap") return "Takedown";
     if (mode === "play" && targetGrapple) return "Q  ·  Grapple";
+    if (mode === "play" && player.onGround && player.hp < MAX_HP && nearestKit(1.8)) return "Green kit  ·  walk over it";
     if (player.gliding) return "Gliding";
     if (!player.onGround) return "Hold Space  ·  Glide";
     return "";
@@ -2096,6 +2102,20 @@
     triggerSlow(900, 0.22);
     shake = Math.max(shake, 0.72);
     blip(140, 0.22, "sawtooth", 0.05, 40);
+  }
+
+  function nearestKit(range) {
+    let best = null;
+    let bestD = range;
+    kits.forEach((k) => {
+      if (k.taken) return;
+      const d = flatDist(player.pos, k.mesh.position);
+      if (d < bestD && Math.abs(player.pos.y - (k.baseY - 0.62)) < 1.4) {
+        best = k;
+        bestD = d;
+      }
+    });
+    return best;
   }
 
   function nearestLiving(range) {
