@@ -2,7 +2,7 @@
 
 Free custom game for Alexander Haislip. An original stick vigilante on an original rainy night block.
 
-Chain strikes between alley crew, counter the red warning over a thug’s head, drop from the stone perch, grapple the glowing rings, glide between roofs, and use a stun disc and a smoke pellet. Clear the block for the win screen.
+Chain strikes between alley crew, counter the red warning over a thug’s head, drop from the stone perch, grapple the glowing rings, glide between roofs, and use a stun disc and a smoke pellet. Green gutter kits on the street restore health when you walk over them while hurt. Clear the block for the win screen.
 
 ## Play
 
@@ -24,6 +24,7 @@ Then open `http://localhost:8080/rainline/`.
 - `E` silent drop from the marked stone perch
 - `Space` jump, hold in the air to glide
 - `1` stun disc, `2` smoke pellet
+- Walk over a green gutter kit while hurt to restore health
 - `H` switches High / Low quality (shadow detail, bloom, rain density)
 - `Esc` pause
 

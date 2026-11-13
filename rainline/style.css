@@ -145,12 +145,14 @@ body.impact #flash { background: rgba(255, 244, 214, 0.38); opacity: 1; }
   font-size: 12px;
 }
 
-#alert, #remain {
+#alert, #remain, #kits {
   padding: 4px 8px;
   border-radius: 99px;
   border: 1px solid var(--border);
   background: rgba(22, 27, 34, 0.85);
 }
+
+#kits { color: var(--green-2); }
 
 #alert.on {
   color: #fff;

@@ -14,6 +14,7 @@
   const comboN = document.getElementById("comboN");
   const alertEl = document.getElementById("alert");
   const remainEl = document.getElementById("remain");
+  const kitsEl = document.getElementById("kits");
   const cdDisc = document.getElementById("cdDisc");
   const cdSmoke = document.getElementById("cdSmoke");
 
@@ -38,6 +39,12 @@
   const COMBO_NEED = 5;
   const DISC_CD = 4.5;
   const SMOKE_CD = 7;
+  const KIT_HEAL = 36;
+  const KIT_SPOTS = [
+    { x: -3.4, z: 4.8 },
+    { x: 7.2, z: -6.6 },
+    { x: -8.5, z: -10.2 },
+  ];
 
   const keys = {};
   const cam = { yaw: Math.PI / 2, pitch: -0.16, dist: 6.4 };
@@ -63,6 +70,7 @@
   let solids = [];
   let hero;
   let enemies = [];
+  let kits = [];
   let grapples = [];
   let targetGrapple = null;
   let mode = "title";
@@ -353,6 +361,7 @@
     addGrapple(20, 2);
     addGrapple(0, 18);
     addGrapple(0.4, 0.2);
+    buildKits();
 
     buildGargoyle();
     buildSkyline(winCanvas);
@@ -521,6 +530,36 @@
     pole.receiveShadow = true;
     scene.add(pole);
     grapples.push(ring);
+  }
+
+  function buildKits() {
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x0d1117,
+      emissive: 0x3fb950,
+      emissiveIntensity: 1.5,
+      roughness: 0.32,
+      metalness: 0.45,
+    });
+    const capMat = new THREE.MeshStandardMaterial({
+      color: 0x3fb950,
+      emissive: 0x3fb950,
+      emissiveIntensity: 2.6,
+      roughness: 0.28,
+      metalness: 0.2,
+    });
+    KIT_SPOTS.forEach((spot, i) => {
+      const y = groundHeight(spot.x, spot.z);
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.32, 10), bodyMat);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 10), capMat);
+      cap.position.y = 0.18;
+      const glow = new THREE.PointLight(0x3fb950, 1.15, 4.2, 2);
+      glow.position.y = 0.2;
+      group.add(body, cap, glow);
+      group.position.set(spot.x, y + 0.62, spot.z);
+      scene.add(group);
+      kits.push({ mesh: group, baseY: y + 0.62, taken: false, phase: i * 2.1 });
+    });
   }
 
   function buildGargoyle() {
@@ -1112,6 +1151,11 @@
     smoke.life = 0;
     smoke.cd = 0;
     smoke.mesh.visible = false;
+    kits.forEach((k) => {
+      k.taken = false;
+      k.mesh.visible = true;
+      k.mesh.position.y = k.baseY;
+    });
     leap = null;
     grapple = null;
     enemies.forEach((e, i) => {
@@ -1269,6 +1313,7 @@
       updateSmoke(dt);
     }
     updateEnemies(dt);
+    updateKits(dt);
     updateAmbience(dt);
     poseHero(dt);
     poseEnemies(dt);
@@ -1466,6 +1511,24 @@
     e.pos.x = nx;
     e.pos.z = nz;
     e.pos.y = h;
+  }
+
+  function updateKits(dt) {
+    for (let i = 0; i < kits.length; i++) {
+      const k = kits[i];
+      if (k.taken) continue;
+      k.mesh.rotation.y += dt * 1.6;
+      k.mesh.position.y = k.baseY + Math.sin(time * 2.4 + k.phase) * 0.07;
+      if (!started || mode !== "play" || player.hp >= MAX_HP) continue;
+      if (Math.abs(player.pos.y - (k.baseY - 0.62)) > 1.3) continue;
+      if (flatDist(player.pos, k.mesh.position) > 1.15) continue;
+      k.taken = true;
+      k.mesh.visible = false;
+      player.hp = Math.min(MAX_HP, player.hp + KIT_HEAL);
+      burst(k.mesh.position.x, k.baseY, k.mesh.position.z, 0x3fb950, 0.45);
+      spawnSplash(k.mesh.position.x, k.baseY - 0.62, k.mesh.position.z);
+      blip(520, 0.12, "sine", 0.04, 780);
+    }
   }
 
   function updateDisc(dt) {
@@ -1907,6 +1970,10 @@
     comboBar.style.transform = "scaleX(" + Math.min(1, player.combo / COMBO_NEED) + ")";
     comboN.textContent = "x" + player.combo;
     remainEl.textContent = living + " left";
+    if (kitsEl) {
+      const left = kits.filter((k) => !k.taken).length;
+      kitsEl.textContent = left + (left === 1 ? " kit" : " kits");
+    }
     const alert = enemies.some((e) => !e.dead && (e.state === "chase" || e.state === "telegraph"));
     alertEl.textContent = alert ? "alert" : "hidden";
     alertEl.className = alert ? "on" : "off";
@@ -1933,6 +2000,7 @@
     if (mode === "grapple") return "Grappling";
     if (mode === "leap") return "Takedown";
     if (mode === "play" && targetGrapple) return "Q  ·  Grapple";
+    if (mode === "play" && player.onGround && player.hp < MAX_HP && nearestKit(1.8)) return "Green kit  ·  walk over it";
     if (player.gliding) return "Gliding";
     if (!player.onGround) return "Hold Space  ·  Glide";
     return "";
@@ -2034,6 +2102,20 @@
     triggerSlow(900, 0.22);
     shake = Math.max(shake, 0.72);
     blip(140, 0.22, "sawtooth", 0.05, 40);
+  }
+
+  function nearestKit(range) {
+    let best = null;
+    let bestD = range;
+    kits.forEach((k) => {
+      if (k.taken) return;
+      const d = flatDist(player.pos, k.mesh.position);
+      if (d < bestD && Math.abs(player.pos.y - (k.baseY - 0.62)) < 1.4) {
+        best = k;
+        bestD = d;
+      }
+    });
+    return best;
   }
 
   function nearestLiving(range) {
